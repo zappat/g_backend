@@ -1,0 +1,24 @@
+name: Deploying Changes
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: deploying changes
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          script: |
+            cd /root/Gear-Connect/gearconnect-backend
+            docker-compose -f docker-compose.prod.yml stop
+            git switch origin main
+            git fetch origin main
+            git reset --hard origin/main
+            docker-compose -f docker-compose.prod.yml start
