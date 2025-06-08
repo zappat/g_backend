@@ -69,12 +69,16 @@ class Profile(UUIDBase):
 
     first_name = models.CharField(max_length=14)
     last_name = models.CharField(max_length=14)
-    profile_picture = models.ImageField(default='profile-photo/default.png',
-                                        upload_to=profile_picture_path,
-                                        storage=PublicMediaStorage)
+    # profile_picture = models.ImageField(default='profile-photo/default.png',
+    #                                     upload_to=profile_picture_path,
+    #                                     storage=PublicMediaStorage)
+    # cover_picture = models.ImageField(default='cover-photo/default.png',
+    #                                   upload_to=cover_picture_path,
+    #                                   storage=PublicMediaStorage)
     cover_picture = models.ImageField(default='cover-photo/default.png',
-                                      upload_to=cover_picture_path,
-                                      storage=PublicMediaStorage)
+                                      upload_to=cover_picture_path)
+    profile_picture = models.ImageField(default='profile-photo/default.png',
+                                        upload_to=profile_picture_path)
     dob = models.DateField(blank=True, null=True)
     about = models.TextField(blank=True, null=True)
     location = models.TextField(blank=True, null=True)
