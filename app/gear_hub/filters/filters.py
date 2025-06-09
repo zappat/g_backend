@@ -14,18 +14,24 @@ class GearItemFilter(filters.FilterSet):
     pick_up = filters.DateTimeFilter(method="filter_by_dates")
     drop_off = filters.DateTimeFilter(method="filter_by_dates")
     category = filters.CharFilter(method="filter_by_category")
-    location_lat = filters.NumberFilter(method="filter_by_location")    
-    location_lon = filters.NumberFilter(method="filter_by_location")    
+    lat = filters.NumberFilter(method="filter_by_location")    
+    lon = filters.NumberFilter(method="filter_by_location")    
 
     class Meta:
         model = GearItem
-        fields = ["category", "pick_up", "drop_off", "location_lat", "location_lon"]
+        fields = ["category", "pick_up", "drop_off", "lat", "lon"]
 
     def filter_by_dates(self, queryset, name, value):
         pick_up  = self.data.get("pick_up")
         drop_off = self.data.get("drop_off")
 
         if pick_up and drop_off:
+            # First check if the item is available for the requested dates
+            queryset = queryset.filter(
+                Q(rent_start_date__lte=pick_up) & Q(rent_end_date__gte=drop_off)
+            )
+            
+            # Then check for overlapping bookings
             overlapping_bookings = Cart.objects.filter(
                 Q(pick_up_date__lt=drop_off) & Q(drop_off_date__gt=pick_up)
             ).values_list("gear_item_id", flat=True)
@@ -35,40 +41,35 @@ class GearItemFilter(filters.FilterSet):
         return queryset
 
     def filter_by_location(self, queryset, name, value):
-        lat = self.data.get("location_lat")
-        lon = self.data.get("location_lon")
+        lat = self.data.get("lat")
+        lon = self.data.get("lon")
+        
         if lat and lon:
-            user_location = Point(float(lon), float(lat), srid=4326)
+            try:
+                user_lat = float(lat)
+                user_lon = float(lon)
+                filtered_queryset = queryset.none()
 
-            filtered_queryset = queryset.none()
+                for item in queryset:
+                    if item.pick_up_location and isinstance(item.pick_up_location, dict):
+                        # Get bounding box from pick_up_location
+                        boundingbox = item.pick_up_location.get('boundingbox', [])
+                        if len(boundingbox) == 4:
+                            min_lat = float(boundingbox[0])
+                            max_lat = float(boundingbox[1])
+                            min_lon = float(boundingbox[2])
+                            max_lon = float(boundingbox[3])
+                            
+                            # Check if user coordinates are within the bounding box
+                            if (min_lat <= user_lat <= max_lat and 
+                                min_lon <= user_lon <= max_lon):
+                                filtered_queryset = filtered_queryset | queryset.filter(id=item.id)
 
-            for item in queryset:
-                if item.pick_up_location:
-                    try:
-                        if isinstance(item.pick_up_location, list) and len(item.pick_up_location) > 0:
-                            item_lat = float(item.pick_up_location[0].get("lat", 0))
-                            item_lon = float(item.pick_up_location[0].get("lon", 0))
-                        elif isinstance(item.pick_up_location, dict):
-                            item_lat = float(item.pick_up_location.get("lat", 0))
-                            item_lon = float(item.pick_up_location.get("lon", 0))
-                        else:
-                            continue  
-
-                        item_location = Point(item_lon, item_lat, srid=4326)
-                        distance = item_location.distance(user_location) * 111.32  
-                        desired_distance = 2  
-
-                        if distance <= desired_distance:
-                            filtered_queryset = filtered_queryset | queryset.filter(id=item.id)
-
-                    except (IndexError, ValueError, TypeError) as e:
-                        print(f"Error processing item {item.id}: {e}")
-                        continue  
-
-            queryset = filtered_queryset
+                queryset = filtered_queryset
+            except (ValueError, TypeError) as e:
+                print(f"Error processing coordinates: {e}")
+                
         return queryset
-
-
 
     def get_all_category_ids(self, category):
         """
