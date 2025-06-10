@@ -93,7 +93,8 @@ class GearItem(UUIDBase):
 
 
 class GearItemPicture(models.Model):
-    image = models.ImageField(upload_to=get_gear_items_picture_path, storage=PublicMediaStorage)
+    # image = models.ImageField(upload_to=get_gear_items_picture_path, storage=PublicMediaStorage)
+    image = models.ImageField(upload_to=get_gear_items_picture_path)
     is_cover_photo = models.BooleanField(default=False)
     gear_item = models.ForeignKey(GearItem, on_delete=models.CASCADE)
 
