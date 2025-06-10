@@ -12,6 +12,7 @@ from user.serializers import UserSerializer
 
 class GearItemPictureSerializer(serializers.ModelSerializer):
     """Serializer for gear item pictures with bulk support."""
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = GearItemPicture
@@ -24,6 +25,12 @@ class GearItemPictureSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'gear_item': {'read_only': True}
         }
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if obj.image and hasattr(obj.image, 'url'):
+            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        return None
 
 
 class GearItemSerializer(serializers.ModelSerializer):
@@ -156,5 +163,9 @@ class GearItemSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         pictures = GearItemPicture.objects.filter(gear_item=instance)
-        representation['gear_item_pictures'] = GearItemPictureSerializer(pictures, many=True).data
+        representation['gear_item_pictures'] = GearItemPictureSerializer(
+            pictures, 
+            many=True,
+            context=self.context
+        ).data
         return representation
