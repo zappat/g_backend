@@ -40,7 +40,8 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
 
     path('api/user/', include('user.urls')),
-    path('api/gear-hub/', include('gear_hub.urls'))
+    path('api/gear-hub/', include('gear_hub.urls')),
+    path('api/rfq/', include('rfq.urls'))
 
 ] + static(settings.MEDIA_URL,
            document_root=settings.MEDIA_ROOT)

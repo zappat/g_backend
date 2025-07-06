@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'storages',
     'gear_hub',
+    'rfq',
 
     'django_filters',
     'django.contrib.gis',
