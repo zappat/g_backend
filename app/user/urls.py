@@ -26,16 +26,29 @@ ORGANIZATION_URL_PATTERNS = [
     ),
 ]
 
-PROFILE_URL_PATTERNS = [
+MERCHANT_PROFILE_URL_PATTERNS = [
     path(
         '',
-        views.ProfileRetrieveUpdateAPIView.as_view(),
-        name='create-retrive-update'
+        views.MerchantProfileRetrieveUpdateAPIView.as_view(),
+        name='merchant-create-retrive-update'
     ),
     path(
         'delete/<str:pk>/',
-        views.ProfileDeleteAPIView.as_view(),
-        name='delete'
+        views.MerchantProfileDeleteAPIView.as_view(),
+        name='merchant-delete'
+    )
+]
+
+RENTER_PROFILE_URL_PATTERNS = [
+    path(
+        '',
+        views.RenterProfileRetrieveUpdateAPIView.as_view(),
+        name='renter-create-retrive-update'
+    ),
+    path(
+        'delete/<str:pk>/',
+        views.RenterProfileDeleteAPIView.as_view(),
+        name='renter-delete'
     )
 ]
 
@@ -91,7 +104,8 @@ USER_URL_PATTERNS = [
 
 urlpatterns = [
     path('organization/', include(ORGANIZATION_URL_PATTERNS)),
-    path('profile/', include(PROFILE_URL_PATTERNS)),
+    path('merchant-profile/', include(MERCHANT_PROFILE_URL_PATTERNS)),
+    path('renter-profile/', include(RENTER_PROFILE_URL_PATTERNS)),
     path('identity-verification/', include(IDENTITY_VERFICATION_URL_PATTERNS)),
     path('additional-info/', include(ADDITIONAL_URL_PATTERN)),
     path('', include(USER_URL_PATTERNS)),

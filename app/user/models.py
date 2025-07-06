@@ -64,27 +64,49 @@ class IdentityVerification(UUIDBase):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
 
-class Profile(UUIDBase):
-    """Model for user profile."""
-
-    first_name = models.CharField(max_length=14)
-    last_name = models.CharField(max_length=14)
+class MerchantProfile(UUIDBase):
+    """Model for merchant user profile."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    profile_picture = models.ImageField(default='profile-photo/default.png', upload_to=profile_picture_path)
+    cover_picture = models.ImageField(default='cover-photo/default.png', upload_to=cover_picture_path)
     # profile_picture = models.ImageField(default='profile-photo/default.png',
     #                                     upload_to=profile_picture_path,
     #                                     storage=PublicMediaStorage)
     # cover_picture = models.ImageField(default='cover-photo/default.png',
     #                                   upload_to=cover_picture_path,
     #                                   storage=PublicMediaStorage)
-    cover_picture = models.ImageField(default='cover-photo/default.png',
-                                      upload_to=cover_picture_path)
-    profile_picture = models.ImageField(default='profile-photo/default.png',
-                                        upload_to=profile_picture_path)
-    dob = models.DateField(blank=True, null=True)
-    about = models.TextField(blank=True, null=True)
+    display_name = models.CharField(max_length=100)
+    contact_email = models.EmailField(max_length=255, blank=True, null=True)
     location = models.TextField(blank=True, null=True)
+    website_url = models.URLField(blank=True, null=True)
+    about = models.TextField(blank=True, null=True)
     linkedin_url = models.URLField(blank=True, null=True)
-    personal_website_url = models.URLField(blank=True, null=True)
+    instagram_url = models.URLField(blank=True, null=True)
+    equipment_categories = models.ManyToManyField('EquipmentCategory', blank=True)
+
+    def __str__(self):
+        return f"{self.pk} - {self.user.email}"
+
+class EquipmentCategory(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class RenterProfile(UUIDBase):
+    """Model for renter user profile."""
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    profile_picture = models.ImageField(default='profile-photo/default.png', upload_to=profile_picture_path)
+    cover_picture = models.ImageField(default='cover-photo/default.png', upload_to=cover_picture_path)
+    display_name = models.CharField(max_length=100)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    location = models.TextField(blank=True, null=True)
+    about = models.TextField(blank=True, null=True)
+    website_url = models.URLField(blank=True, null=True)
+    linkedin_url = models.URLField(blank=True, null=True)
+    instagram_url = models.URLField(blank=True, null=True)
+    vimeo_url = models.URLField(blank=True, null=True)
+    youtube_url = models.URLField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.pk} - {self.user.email}"

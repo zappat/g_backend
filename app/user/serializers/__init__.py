@@ -1,6 +1,6 @@
 from .organization_serializer import OrganizationSerializer
 from .user_serializer import UserSerializer
+from .profile_serializer import MerchantProfileSerializer, RenterProfileSerializer
 from .identity_verification_serializer import IdentityVerificationSerializer
-from .profile_serializer import ProfileSerializer
 from .login_serializers import CustomTokenObtainPairSerializer
 from .additional_info_serializers import *

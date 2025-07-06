@@ -85,7 +85,10 @@ class GearItemSerializer(serializers.ModelSerializer):
 
     def get_joining_date(self, obj):
         """Returns the joining date of the gear provider"""
-        profile = getattr(obj.provider, "profile", None)
+        # Try to get merchant profile first, then renter profile
+        profile = getattr(obj.provider, "merchantprofile", None)
+        if not profile:
+            profile = getattr(obj.provider, "renterprofile", None)
         if profile:
             return profile.created_at.date().isoformat()
         return None

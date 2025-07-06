@@ -5,7 +5,7 @@ from django_rest_passwordreset.signals import reset_password_token_created
 from django.core.mail import send_mail, EmailMessage
 from django.db.models.signals import post_delete, post_save
 
-from user.models import IdentityVerification, Profile
+from user.models import IdentityVerification, MerchantProfile, RenterProfile
 
 User = get_user_model()
 
@@ -37,14 +37,23 @@ def delete_identity_document_from_s3(sender, instance, **kwargs):
     if instance.document:
         instance.document.delete(save=False)
 
-@receiver(post_delete, sender=Profile)
-def delete_profile_pictures_from_s3(sender, instance, **kwargs):
+@receiver(post_delete, sender=MerchantProfile)
+def delete_merchant_profile_pictures_from_s3(sender, instance, **kwargs):
     """
-    Deletes the profile and cover pictures from S3 storage when the corresponding `Profile` object is deleted.
+    Deletes the profile and cover pictures from S3 storage when the corresponding `MerchantProfile` object is deleted.
     """
     if instance.profile_picture and instance.profile_picture.name != 'profile-photo/default.png':
         instance.profile_picture.delete(save=False)
-    
+    if instance.cover_picture and instance.cover_picture.name != 'cover-photo/default.png':
+        instance.cover_picture.delete(save=False)
+
+@receiver(post_delete, sender=RenterProfile)
+def delete_renter_profile_pictures_from_s3(sender, instance, **kwargs):
+    """
+    Deletes the profile and cover pictures from S3 storage when the corresponding `RenterProfile` object is deleted.
+    """
+    if instance.profile_picture and instance.profile_picture.name != 'profile-photo/default.png':
+        instance.profile_picture.delete(save=False)
     if instance.cover_picture and instance.cover_picture.name != 'cover-photo/default.png':
         instance.cover_picture.delete(save=False)
 
@@ -53,4 +62,5 @@ def delete_profile_pictures_from_s3(sender, instance, **kwargs):
 def create_profile(sender, instance, created, **kwargs):
     """Creates a profile instance on the user creation"""
     if created:
-        Profile.objects.create(user=instance)
+        MerchantProfile.objects.create(user=instance)
+        RenterProfile.objects.create(user=instance)
