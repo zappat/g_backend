@@ -48,16 +48,15 @@ class GearItemSerializer(serializers.ModelSerializer):
         model = GearItem
         fields = (
             "id",
-            "name",
+            "equipment_name",
+            "equipment_category",
+            "key_specifications",
+            "additional_notes",
             "description",
-            "features",
             "rent_start_date",
             "rent_end_date",
-            "category",
-            "category_name",
-            "provider",
-            "gear_item_pictures",
-            "is_favorite",
+            "owner",
+            "is_public",
             "pick_up_location",
             "brand",
             "model",
@@ -69,11 +68,9 @@ class GearItemSerializer(serializers.ModelSerializer):
             "total_views",
             "value",
             "rentals",
-            "average_rating", 
-            "booked_dates",
-            "joining_date",
-            "positive_review"
+            "gear_item_pictures",
         )
+        read_only_fields = ("owner",)
 
     def get_positive_review(self, obj):
         """Returns the percentage of the average rating"""

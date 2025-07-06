@@ -66,13 +66,15 @@ class GearItem(UUIDBase):
         DRAFT = ('draft', _('Draft'))
         PACKAGING_ONLY = ('packaging_only', _('Packaging Only'))
 
-    name = models.CharField(max_length=100)
+    equipment_name = models.CharField(max_length=100)
+    key_specifications = models.TextField()
+    additional_notes = models.TextField(blank=True, null=True)
+    equipment_category = models.ForeignKey(GearCategories, on_delete=models.CASCADE)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    is_public = models.BooleanField(default=True)
     description = models.TextField()
-    features = models.TextField()
     rent_start_date = models.DateField(blank=True, null=True)
     rent_end_date = models.DateField(blank=True, null=True)
-    category = models.ForeignKey(GearCategories, on_delete=models.CASCADE)
-    provider = models.ForeignKey(User, on_delete=models.CASCADE)
     pick_up_location = models.JSONField(default=default_JSON)
     brand = models.CharField(max_length=200, blank=True, null=True)
     model = models.CharField(max_length=200, blank=True, null=True)
@@ -89,7 +91,7 @@ class GearItem(UUIDBase):
     
 
     def __str__(self) -> str:
-        return f"{self.id}-{self.name}"
+        return f"{self.id}-{self.equipment_name}"
 
 
 class GearItemPicture(models.Model):

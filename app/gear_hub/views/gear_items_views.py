@@ -5,7 +5,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from gear_hub.serializers import GearItemSerializer
+from gear_hub.serializers.gear_item_serializer import GearItemSerializer
 from gear_hub.models import GearItem, GearCategories
 from gear_hub.filters import GearItemFilter
 
@@ -25,7 +25,7 @@ class GearItemListAPIView(generics.ListAPIView):
         user = self.request.user
         queryset = GearItem.objects.all()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(provider=user)
+            queryset = queryset.filter(owner=user)
         return queryset
 
 class AvailableGearItemListAPIView(generics.ListAPIView):
@@ -55,17 +55,17 @@ class GearItemRetrieveAPIView(generics.RetrieveAPIView):
     def get_related_items(self, gear_item):
         """Retrieve related gear item as suggestions while retrieving one gear item"""
         related_items = GearItem.objects.filter(
-            provider=gear_item.provider,
+            owner=gear_item.owner,
         ).exclude(id=gear_item.id)[:4]
 
         if related_items.count() < 4:
             additional_items_needed = 4 - related_items.count()
             
-            category_ids = GearCategories.objects.get(id=gear_item.category.id).get_all_category_ids()
+            category_ids = GearCategories.objects.get(id=gear_item.equipment_category.id).get_all_category_ids()
 
             additional_items = GearItem.objects.filter(
-                category__id__in = category_ids
-            ).exclude(provider=gear_item.provider).exclude(id=gear_item.id)[:additional_items_needed]
+                equipment_category__id__in = category_ids
+            ).exclude(owner=gear_item.owner).exclude(id=gear_item.id)[:additional_items_needed]
 
             related_items = list(related_items) + list(additional_items)
 
@@ -91,6 +91,9 @@ class GearItemCreateApiView(generics.CreateAPIView):
     serializer_class = GearItemSerializer
     queryset = GearItem.objects.all()
     
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
 
 class GearItemUpdateApiView(generics.UpdateAPIView):
     """Update gear item object"""
