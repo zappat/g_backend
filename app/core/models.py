@@ -36,7 +36,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class UserRole(models.TextChoices):
         RENTER = ('renter', _('Renter'))
-        GEAR_PROVIDER = ('gear_provider', _('Gear Provider'))
+        MERCHANT = ('merchant', _('Merchant'))
 
     email = models.EmailField(max_length=255, unique=True)
     is_active = models.BooleanField(default=True)

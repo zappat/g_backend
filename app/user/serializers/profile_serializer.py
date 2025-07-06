@@ -23,11 +23,11 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         profile_picture = validated_data.get('profile_picture', None)
-        if profile_picture and instance.profile_picture:
+        if profile_picture and instance.profile_picture and instance.profile_picture.name != 'profile-photo/default.png':
             instance.profile_picture.delete(save=False)
 
         cover_picture = validated_data.get('cover_picture', None)
-        if cover_picture and instance.cover_picture:
+        if cover_picture and instance.cover_picture and instance.cover_picture.name != 'cover-photo/default.png':
             instance.cover_picture.delete(save=False)
 
         for attr, value in validated_data.items():
