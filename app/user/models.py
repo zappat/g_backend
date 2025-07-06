@@ -82,7 +82,7 @@ class MerchantProfile(UUIDBase):
     about = models.TextField(blank=True, null=True)
     linkedin_url = models.URLField(blank=True, null=True)
     instagram_url = models.URLField(blank=True, null=True)
-    equipment_categories = models.ManyToManyField('EquipmentCategory', blank=True)
+    equipment_category = models.ForeignKey('EquipmentCategory', on_delete=models.SET_NULL, blank=True, null=True)
 
     def __str__(self):
         return f"{self.pk} - {self.user.email}"
