@@ -3,21 +3,19 @@ from django.db.models import Avg
 
 from rest_framework import serializers
 
-from user.serializers.organization_serializer import OrganizationSerializer
 from user.serializers.profile_serializer import MerchantProfileSerializer, RenterProfileSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for the user object"""
 
-    organization = OrganizationSerializer(read_only=True)
     merchant_profile = MerchantProfileSerializer(read_only=True)
     renter_profile = RenterProfileSerializer(read_only=True)
     average_rating = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = get_user_model()
-        fields = ('id','email', 'password', 'role', 'organization', 'merchant_profile', 'renter_profile', 'average_rating')
+        fields = ('id','email', 'password', 'role', 'merchant_profile', 'renter_profile', 'average_rating')
         extra_kwargs = {'password': {'write_only': True, 'min_length': 5}}
         
     def get_average_rating(self, obj):
