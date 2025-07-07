@@ -30,6 +30,7 @@ from django.urls import path, include
 from user.views import CustomTokenObtainPairView
 
 urlpatterns = [
+    
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(), name='api-schema'),
     path('api/password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
@@ -41,7 +42,8 @@ urlpatterns = [
 
     path('api/user/', include('user.urls')),
     path('api/gear-hub/', include('gear_hub.urls')),
-    path('api/rfq/', include('rfq.urls'))
+    path('api/rfq/', include('rfq.urls')),
+    path('api/training/', include('training.urls')),
 
 ] + static(settings.MEDIA_URL,
            document_root=settings.MEDIA_ROOT)

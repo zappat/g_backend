@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'storages',
     'gear_hub',
     'rfq',
-
+    'training',
     'django_filters',
     'django.contrib.gis',
 ]
