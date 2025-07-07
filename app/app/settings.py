@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'rfq',
     'training',
     'message',
+    'review',
     'django_filters',
     'django.contrib.gis',
     'django_extensions'

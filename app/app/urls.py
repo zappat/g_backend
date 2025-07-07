@@ -45,6 +45,7 @@ urlpatterns = [
     path('api/rfq/', include('rfq.urls')),
     path('api/training/', include('training.urls')),
     path('api/message/', include('message.urls')),
+    path('api/review/', include('review.urls')),
 
 ] + static(settings.MEDIA_URL,
            document_root=settings.MEDIA_ROOT)
