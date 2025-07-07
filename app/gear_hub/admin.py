@@ -1,12 +1,11 @@
 from django.contrib import admin
-from .models import GearCategories, GearItem, GearItemPicture, Booking, AddFavorite, Review, GearItemRent, Cart
+from .models import GearCategories, GearItem, GearItemPicture, AddFavorite
 
 @admin.register(GearItem)
 class GearItemAdmin(admin.ModelAdmin):
     list_display = (
         "equipment_name",
         "equipment_category",
-        "owner",
         "is_public",
     )
     search_fields = ("equipment_name",)
@@ -14,8 +13,4 @@ class GearItemAdmin(admin.ModelAdmin):
 
 admin.site.register(GearCategories)
 admin.site.register(GearItemPicture)
-admin.site.register(Booking)
 admin.site.register(AddFavorite)
-admin.site.register(Review)
-admin.site.register(GearItemRent)   
-admin.site.register(Cart)

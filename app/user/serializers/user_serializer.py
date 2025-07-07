@@ -5,7 +5,6 @@ from rest_framework import serializers
 
 from user.serializers.organization_serializer import OrganizationSerializer
 from user.serializers.profile_serializer import MerchantProfileSerializer, RenterProfileSerializer
-from gear_hub.models import Review
 
 
 class UserSerializer(serializers.ModelSerializer):

@@ -19,4 +19,4 @@ class GearCategoriesListAPIView(generics.ListAPIView):
             except GearCategories.DoesNotExist:
                 raise exceptions.ValidationError("Category with the provided ID does not exist.")
         else:
-            return GearCategories.objects.filter(parent__isnull=True)
+            return GearCategories.objects.all()

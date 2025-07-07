@@ -7,7 +7,6 @@ from rest_framework.views import APIView
 
 from gear_hub.serializers.gear_item_serializer import GearItemSerializer
 from gear_hub.models import GearItem, GearCategories
-from gear_hub.filters import GearItemFilter
 
 from core.permission import IsAdminOrProvider
 from core.pagination import StandardResultsSetPagination
@@ -32,7 +31,6 @@ class AvailableGearItemListAPIView(generics.ListAPIView):
     queryset = GearItem.objects.all()
     serializer_class = GearItemSerializer
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = GearItemFilter
     pagination_class = StandardResultsSetPagination
     permission_classes = (permissions.AllowAny,)
 
