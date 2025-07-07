@@ -43,6 +43,7 @@ class GearItemSerializer(serializers.ModelSerializer):
     booked_dates = serializers.SerializerMethodField(read_only=True)
     joining_date = serializers.SerializerMethodField(read_only=True)
     positive_review = serializers.SerializerMethodField(read_only=True)
+    created_by = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = GearItem

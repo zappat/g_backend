@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from core.models import User
 from core.mixins import UUIDBase
 from user.utils import get_gear_items_picture_path
+from user.models import MerchantProfile
 from app.storage_backends import PublicMediaStorage
 
 
@@ -66,6 +67,7 @@ class GearItem(UUIDBase):
         DRAFT = ('draft', _('Draft'))
         PACKAGING_ONLY = ('packaging_only', _('Packaging Only'))
 
+    created_by = models.ForeignKey(MerchantProfile, on_delete=models.CASCADE, null=True, blank=True)
     equipment_name = models.CharField(max_length=100)
     key_specifications = models.TextField()
     additional_notes = models.TextField(blank=True, null=True)
