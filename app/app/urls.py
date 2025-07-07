@@ -44,6 +44,7 @@ urlpatterns = [
     path('api/gear-hub/', include('gear_hub.urls')),
     path('api/rfq/', include('rfq.urls')),
     path('api/training/', include('training.urls')),
+    path('api/message/', include('message.urls')),
 
 ] + static(settings.MEDIA_URL,
            document_root=settings.MEDIA_ROOT)

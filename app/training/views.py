@@ -1,15 +1,13 @@
 from rest_framework import generics, permissions
 from .models import TrainingCourse, TrainingCategory
 from .serializers import TrainingCourseSerializer, TrainingCategorySerializer
-from user.models import MerchantProfile
 
 class TrainingCourseListCreateView(generics.ListCreateAPIView):
     queryset = TrainingCourse.objects.all()
     serializer_class = TrainingCourseSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     def perform_create(self, serializer):
-        merchant_profile = MerchantProfile.objects.get(user=self.request.user)
-        serializer.save(created_by=merchant_profile)
+        serializer.save(created_by=self.request.user)
 
 class TrainingCourseDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = TrainingCourse.objects.all()

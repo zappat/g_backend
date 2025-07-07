@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import RFQ, RFQAttachment
-from user.models import EquipmentCategory, RenterProfile
+from user.models import EquipmentCategory
 
 class RFQAttachmentSerializer(serializers.ModelSerializer):
     class Meta:

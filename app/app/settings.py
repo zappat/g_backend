@@ -50,8 +50,10 @@ INSTALLED_APPS = [
     'gear_hub',
     'rfq',
     'training',
+    'message',
     'django_filters',
     'django.contrib.gis',
+    'django_extensions'
 ]
 
 MIDDLEWARE = [

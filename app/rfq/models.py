@@ -1,5 +1,6 @@
 from django.db import models
-from user.models import RenterProfile, EquipmentCategory
+from core.models import User
+from user.models import EquipmentCategory
 
 class RFQ(models.Model):
     STATUS_CHOICES = [
@@ -11,7 +12,7 @@ class RFQ(models.Model):
         ('private', 'Private'),
     ]
 
-    created_by = models.ForeignKey(RenterProfile, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField()
     pickup_location = models.CharField(max_length=255)

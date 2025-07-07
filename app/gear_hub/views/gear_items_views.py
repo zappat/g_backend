@@ -9,8 +9,6 @@ from gear_hub.serializers.gear_item_serializer import GearItemSerializer
 from gear_hub.models import GearItem, GearCategories
 from gear_hub.filters import GearItemFilter
 
-from user.models import MerchantProfile
-
 from core.permission import IsAdminOrProvider
 from core.pagination import StandardResultsSetPagination
 
@@ -92,8 +90,7 @@ class GearItemCreateApiView(generics.CreateAPIView):
     queryset = GearItem.objects.all()
     
     def perform_create(self, serializer):
-        merchant_profile = MerchantProfile.objects.get(user=self.request.user)
-        serializer.save(created_by=merchant_profile, owner=self.request.user)
+        serializer.save(created_by=self.request.user, owner=self.request.user)
 
 
 class GearItemUpdateApiView(generics.UpdateAPIView):

@@ -1,7 +1,6 @@
 from rest_framework import generics, permissions
 from .models import RFQ, RFQAttachment
 from .serializers import RFQSerializer, RFQAttachmentSerializer
-from user.models import RenterProfile
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
@@ -12,8 +11,7 @@ class RFQListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        renter_profile = RenterProfile.objects.get(user=self.request.user)
-        serializer.save(created_by=renter_profile)
+        serializer.save(created_by=self.request.user)
 
 class RFQDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = RFQ.objects.all()
