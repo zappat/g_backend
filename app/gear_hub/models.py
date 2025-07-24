@@ -15,6 +15,10 @@ class GearCategories(UUIDBase):
     """Model for gear categories."""
     category_name = models.CharField(max_length=50)
 
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.CASCADE
+    )
+
     def __str__(self):
         return f"{self.id}-{self.category_name}"
 

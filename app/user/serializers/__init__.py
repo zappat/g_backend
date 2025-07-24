@@ -2,3 +2,4 @@ from .user_serializer import UserSerializer
 from .profile_serializer import MerchantProfileSerializer, RenterProfileSerializer
 from .identity_verification_serializer import IdentityVerificationSerializer
 from .login_serializers import CustomTokenObtainPairSerializer
+from .email_verification_serializer import EmailVerificationVerifySerializer, EmailVerificationResendSerializer

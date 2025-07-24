@@ -198,19 +198,19 @@ SIMPLE_JWT = {
 
 APPEND_SLASH = True
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:3000",
-                        "http://127.0.0.1:3000",
-                        "https://gearconnect-web.vercel.app"]
+CORS_ALLOWED_ORIGINS = ["http://localhost:5173",
+                        "http://127.0.0.1:5173",
+                        "https://gearhire.vercel.app"]
 
 CSRF_TRUSTED_ORIGINS = ['https://*.gearhire.live']
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'iansid0016@gmail.com'
-EMAIL_HOST_PASSWORD = 'lbpa qgze nvat tgxx'
-DEFAULT_FROM_EMAIL = 'iansid0016@gmail.com'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'iansid0016@gmail.com'
+# EMAIL_HOST_PASSWORD = 'lbpa qgze nvat tgxx'
+# DEFAULT_FROM_EMAIL = 'iansid0016@gmail.com'
 
 # settings.py
 GDAL_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgdal.so'

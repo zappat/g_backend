@@ -53,6 +53,8 @@ USER_URL_PATTERNS = [
     path('create/', views.CreateUserView.as_view(), name='create'),
     path('me/', views.ManageUserView.as_view(), name='me'),
     path('delete/<int:pk>/', views.UserDeleteApiView.as_view(), name='delete'),
+    path('verify-email/', views.VerifyEmailView.as_view(), name='verify-email'),
+    path('resend-verification-code/', views.ResendVerificationCodeView.as_view(), name='resend-verification-code'),
 ]
 
 urlpatterns = [

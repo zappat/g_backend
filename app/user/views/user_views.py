@@ -5,6 +5,11 @@ from rest_framework import (generics, permissions, status)
 from rest_framework.response import Response
 from user.serializers import UserSerializer
 from user.utils import get_tokens_for_user
+from user.models import EmailVerification
+from django.core.mail import send_mail
+import random
+from django.utils import timezone
+from datetime import timedelta
 
 
 class CreateUserView(generics.CreateAPIView):
@@ -18,6 +23,30 @@ class CreateUserView(generics.CreateAPIView):
         email = instance.data.get('email')
         user = get_user_model().objects.get(email=email)
         token = get_tokens_for_user(user)
+
+        # Send verification code
+        code = f"{random.randint(100000, 999999)}"
+        expires_at = timezone.now() + timedelta(minutes=10)
+        ev, created = EmailVerification.objects.get_or_create(
+            user=user,
+            defaults={
+                'code': code,
+                'expires_at': expires_at,
+                'is_verified': False,
+            }
+        )
+        if not created:
+            ev.code = code
+            ev.expires_at = expires_at
+            ev.is_verified = False
+            ev.save()
+        send_mail(
+            'Your Verification Code',
+            f'Your verification code is: {code}',
+            'noreply@yourdomain.com',
+            [email],
+            fail_silently=False,
+        )
 
         return Response(token, status=status.HTTP_201_CREATED)
 
