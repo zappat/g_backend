@@ -33,6 +33,18 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if hasattr(user, 'email_verification'):
             data['is_verified'] = user.email_verification.is_verified
 
+        # Add user name and profile image
+        data['name'] = None
+        data['profile_image'] = None
+        if user.role == 'merchant' and hasattr(user, 'merchantprofile'):
+            data['name'] = user.merchantprofile.display_name
+            if user.merchantprofile.profile_picture:
+                data['profile_image'] = user.merchantprofile.profile_picture.url
+        elif user.role == 'renter' and hasattr(user, 'renterprofile'):
+            data['name'] = user.renterprofile.display_name
+            if user.renterprofile.profile_picture:
+                data['profile_image'] = user.renterprofile.profile_picture.url
+
         # Send verification code
         if not data['is_verified']:
             code = f"{random.randint(100000, 999999)}"

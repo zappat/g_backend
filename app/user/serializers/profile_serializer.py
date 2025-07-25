@@ -1,10 +1,12 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from user.models import MerchantProfile, RenterProfile
+from user.models import MerchantProfile, RenterProfile, EquipmentCategory
 
 
 class MerchantProfileSerializer(serializers.ModelSerializer):
     """Serializer for the MerchantProfile object."""
+
+    equipment_categories = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = MerchantProfile
