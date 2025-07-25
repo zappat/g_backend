@@ -33,7 +33,7 @@ class VerifyEmailView(APIView):
             return Response({'message': 'Verification code expired.'}, status=status.HTTP_400_BAD_REQUEST)
         ev.is_verified = True
         ev.save()
-        return Response({'message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
+        return Response({'message': 'Email verified successfully.', 'role': user.role}, status=status.HTTP_200_OK)
 
 class ResendVerificationCodeView(APIView):
     permission_classes = [AllowAny]
