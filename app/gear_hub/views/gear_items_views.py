@@ -22,7 +22,7 @@ class GearItemListAPIView(generics.ListAPIView):
         user = self.request.user
         queryset = GearItem.objects.all()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(owner=user)
+            queryset = queryset.filter(provider=user)
         return queryset
 
 class AvailableGearItemListAPIView(generics.ListAPIView):
@@ -50,20 +50,10 @@ class GearItemRetrieveAPIView(generics.RetrieveAPIView):
 
     def get_related_items(self, gear_item):
         """Retrieve related gear item as suggestions while retrieving one gear item"""
+        # Get related items by the same category
         related_items = GearItem.objects.filter(
-            owner=gear_item.owner,
+            equipment_category=gear_item.equipment_category
         ).exclude(id=gear_item.id)[:4]
-
-        if related_items.count() < 4:
-            additional_items_needed = 4 - related_items.count()
-            
-            category_ids = GearCategories.objects.get(id=gear_item.equipment_category.id).get_all_category_ids()
-
-            additional_items = GearItem.objects.filter(
-                equipment_category__id__in = category_ids
-            ).exclude(owner=gear_item.owner).exclude(id=gear_item.id)[:additional_items_needed]
-
-            related_items = list(related_items) + list(additional_items)
 
         return related_items
 
@@ -83,18 +73,25 @@ class GearItemRetrieveAPIView(generics.RetrieveAPIView):
 class GearItemCreateApiView(generics.CreateAPIView):
     """Create gear item object"""
     
-    permission_classes = (IsAdminOrProvider,)
+    permission_classes = (permissions.AllowAny,)
     serializer_class = GearItemSerializer
     queryset = GearItem.objects.all()
     
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print(f"Validation errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return super().create(request, *args, **kwargs)
+    
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, owner=self.request.user)
+        serializer.save()
 
 
 class GearItemUpdateApiView(generics.UpdateAPIView):
     """Update gear item object"""
     
-    permission_classes = (IsAdminOrProvider,)
+    permission_classes = (permissions.AllowAny,)  # Require authentication
     serializer_class = GearItemSerializer
     queryset = GearItem.objects.all()
 
@@ -102,7 +99,7 @@ class GearItemUpdateApiView(generics.UpdateAPIView):
 class GearItemDestroyAPIView(generics.DestroyAPIView):
     """Delete gear item object"""
     
-    permission_classes = (IsAdminOrProvider,)
+    permission_classes = (permissions.AllowAny,)  # Require authentication
     serializer_class = GearItemSerializer
     queryset = GearItem.objects.all()
     

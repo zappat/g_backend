@@ -33,18 +33,16 @@ class GearItem(UUIDBase):
         DRAFT = ('draft', _('Draft'))
         PACKAGING_ONLY = ('packaging_only', _('Packaging Only'))
 
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='created_gear_items')
     equipment_name = models.CharField(max_length=100)
-    key_specifications = models.TextField()
+    key_specifications = models.TextField(blank=True, null=True)
     additional_notes = models.TextField(blank=True, null=True)
     equipment_category = models.ForeignKey(GearCategories, on_delete=models.CASCADE)
+    provider = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gear_items', null=True, blank=True)
     is_public = models.BooleanField(default=True)
-    description = models.TextField()
     pick_up_location = models.JSONField(default=default_JSON)
     location_privacy = models.CharField(
         max_length=20, choices=LocatiionPrivacy.choices , 
         default=LocatiionPrivacy.PUBLIC)
-    rentals = models.IntegerField(blank=True, null=True)
 
     def __str__(self) -> str:
         return f"{self.id}-{self.equipment_name}"
