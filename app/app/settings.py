@@ -200,9 +200,38 @@ SIMPLE_JWT = {
 
 APPEND_SLASH = True
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173",
-                        "http://127.0.0.1:5173",
-                        "https://gearhire.vercel.app"]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://13.60.183.13",
+    "http://13.60.183.13:3000",
+    "http://13.60.183.13:5173",
+    "http://13.60.183.13:8080",
+    "http://13.60.183.13:8000"
+]
+
+# Additional CORS settings for better compatibility
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 CSRF_TRUSTED_ORIGINS = ['https://*.gearhire.live']
 
