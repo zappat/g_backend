@@ -27,7 +27,7 @@ EXPOSE 8000
 ARG DEV=false
 RUN python -m venv /py && \
     /py/bin/pip install --upgrade pip setuptools==57.5.0 wheel && \
-    /py/bin/pip install -r /tmp/requirements.txt && \
+    /py/bin/pip install --default-timeout=300 --retries=15 -r /tmp/requirements.txt && \
     if [ $DEV = "true" ]; \
         then /py/bin/pip install -r /tmp/requirements.dev.txt ; \
     fi && \
@@ -39,3 +39,5 @@ RUN groupadd -r admin-user && useradd -r -g admin-user admin-user
 USER admin-user
 
 ENV PATH="/py/bin:$PATH"
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

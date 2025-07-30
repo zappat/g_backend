@@ -15,6 +15,7 @@ GEAR_ITEMS_URL_PATTERN = [
     path('update/<str:pk>/', views.GearItemUpdateApiView.as_view(), name='gear-items-update'),
     path('delete/<str:pk>/', views.GearItemDestroyAPIView.as_view(), name='gear-items-delete'),
     path('bulk-delete/<str:ids>/', views.GearItemBulkDestroyAPIView.as_view(), name='gear-item-bulk-delete'),
+    path('<str:pk>/toggle-visibility/', views.GearItemToggleVisibilityAPIView.as_view(), name='gear-item-toggle-visibility'),
 ]
 
 AVIALBLE_GEAR_ITEMS_URL_PATTERN = [

@@ -20,7 +20,7 @@ class GearItemListAPIView(generics.ListAPIView):
     
     def get_queryset(self):
         user = self.request.user
-        queryset = GearItem.objects.all()
+        queryset = GearItem.objects.all().order_by('-created_at') 
         if self.request.user.is_authenticated:
             queryset = queryset.filter(provider=user)
         return queryset
@@ -36,7 +36,7 @@ class AvailableGearItemListAPIView(generics.ListAPIView):
 
 
     def get_queryset(self):
-        queryset = super().get_queryset().filter(location_privacy=GearItem.LocatiionPrivacy.PUBLIC).order_by('id')
+        queryset = super().get_queryset().filter(location_privacy=GearItem.LocatiionPrivacy.PUBLIC).order_by('-created_at') 
         return queryset
 
 
@@ -111,3 +111,17 @@ class GearItemBulkDestroyAPIView(APIView):
         ids = ids.split(',')
         GearItem.objects.filter(id__in=ids).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class GearItemToggleVisibilityAPIView(generics.UpdateAPIView):
+    """Toggle visibility of gear item"""
+
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = GearItemSerializer
+    queryset = GearItem.objects.all()
+
+    def patch(self, request, *args, **kwargs):
+        gear_item = self.get_object()
+        gear_item.is_public = not gear_item.is_public
+        gear_item.save()
+        return Response(status=status.HTTP_200_OK)
+        

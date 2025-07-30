@@ -14,7 +14,7 @@ def default_JSON():
 class GearCategories(UUIDBase):
     """Model for gear categories."""
     category_name = models.CharField(max_length=50)
-
+    category_color = models.CharField(max_length=50, null=True, blank=True)
     parent = models.ForeignKey(
         'self', null=True, blank=True, on_delete=models.CASCADE
     )
