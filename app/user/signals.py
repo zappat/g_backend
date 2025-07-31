@@ -60,7 +60,9 @@ def delete_renter_profile_pictures_from_s3(sender, instance, **kwargs):
 
 @receiver(post_save, sender=User)
 def create_profile(sender, instance, created, **kwargs):
-    """Creates a profile instance on the user creation"""
+    """Creates a profile instance based on user role"""
     if created:
-        MerchantProfile.objects.create(user=instance)
-        RenterProfile.objects.create(user=instance)
+        if instance.role == 'merchant':
+            MerchantProfile.objects.create(user=instance)
+        elif instance.role == 'renter':
+            RenterProfile.objects.create(user=instance)

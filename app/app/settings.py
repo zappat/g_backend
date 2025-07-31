@@ -236,17 +236,12 @@ CORS_ALLOW_HEADERS = [
 CSRF_TRUSTED_ORIGINS = ['https://*.gearhire.live']
 
 # Email Configuration
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For development
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # For production
-# EMAIL_HOST = 'smtp.gmail.com'  # Gmail SMTP
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_USE_SSL = False
-
-# Use environment variables for security (recommended)
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'breeyancornelius051989@gmail.com')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'Andrew@1990')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'mail.dpdrent.ro'
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_HOST_USER = 'office@dpdrent.ro'
+EMAIL_HOST_PASSWORD = 'Direct6161!'
 
 # settings.py
 GDAL_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgdal.so'

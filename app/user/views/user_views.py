@@ -7,6 +7,7 @@ from user.serializers import UserSerializer
 from user.utils import get_tokens_for_user
 from user.models import EmailVerification
 from django.core.mail import send_mail
+from django.conf import settings
 import random
 from django.utils import timezone
 from datetime import timedelta
@@ -40,13 +41,29 @@ class CreateUserView(generics.CreateAPIView):
             ev.expires_at = expires_at
             ev.is_verified = False
             ev.save()
-        send_mail(
-            'Your Verification Code',
-            f'Your verification code is: {code}',
-            'noreply@yourdomain.com',
-            [email],
-            fail_silently=False,
-        )
+        try:
+            print(f"📧 Attempting to send verification email to: {email}")
+            print(f"📧 Using SMTP settings: {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
+            print(f"📧 From: office@dpdrent.ro")
+            
+            send_mail(
+                'Your Verification Code',
+                f'Your verification code is: {code}',
+                'office@dpdrent.ro',
+                [email],
+                fail_silently=False,
+            )
+            print(f"✅ Email sent successfully to {email}")
+            
+        except Exception as e:
+            print(f"❌ Email sending failed: {str(e)}")
+            print(f"❌ Error type: {type(e).__name__}")
+            import traceback
+            print(f"❌ Full traceback:")
+            traceback.print_exc()
+            
+            # Still return success to user, but log the email error
+            print(f"⚠️  User registration successful, but email verification failed")
 
         return Response(token, status=status.HTTP_201_CREATED)
 
