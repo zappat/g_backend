@@ -28,7 +28,12 @@ class Command(BaseCommand):
             "Rigging": ["Truss", "Motors"],
             "Expendables": [],
             "Fiber and Cable": [],
-            "LED": ["Outdoor", "Indoor", "LED Processing"]
+            "LED": ["Outdoor", "Indoor", "LED Processing"],
+            "Stabilizer": [],
+            "Lens": [],
+            "Grip": [],
+            "Accessories": [],
+            "Camera": [],
         }
 
         def create_category(name, parent=None):
