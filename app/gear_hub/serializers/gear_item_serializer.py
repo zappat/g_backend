@@ -83,10 +83,25 @@ class GearItemSerializer(serializers.ModelSerializer):
 
     def get_is_favorite(self, obj):
         request = self.context.get('request')
+        print(f"🔍 Checking is_favorite for gear item: {obj.id}")
+        print(f"🔍 Request context: {request}")
+        
         if request and hasattr(request, "user"):
             user = request.user
+            print(f"🔍 User: {user}")
+            print(f"🔍 User authenticated: {user.is_authenticated}")
+            print(f"🔍 User ID: {getattr(user, 'id', 'No ID')}")
+            
             if user.is_authenticated:
-                return AddFavorite.objects.filter(user=user, gear_item=obj).exists()
+                is_fav = AddFavorite.objects.filter(user=user, gear_item=obj).exists()
+                print(f"🔍 Is favorite: {is_fav}")
+                return is_fav
+            else:
+                print(f"🔍 User not authenticated")
+        else:
+            print(f"🔍 No request or user in context")
+        
+        print(f"🔍 Returning False for is_favorite")
         return False
 
     def create(self, validated_data):

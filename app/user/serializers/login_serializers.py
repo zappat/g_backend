@@ -36,6 +36,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Add user name and profile image
         data['name'] = None
         data['profile_image'] = None
+        data['email'] = user.email
         if user.role == 'merchant' and hasattr(user, 'merchantprofile'):
             data['name'] = user.merchantprofile.display_name
             if user.merchantprofile.profile_picture:

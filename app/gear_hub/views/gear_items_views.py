@@ -19,11 +19,15 @@ class GearItemListAPIView(generics.ListAPIView):
     pagination_class = StandardResultsSetPagination
     
     def get_queryset(self):
-        user = self.request.user
+        # Return all gear items, not filtered by provider
         queryset = GearItem.objects.all().order_by('-created_at') 
-        if self.request.user.is_authenticated:
-            queryset = queryset.filter(provider=user)
         return queryset
+    
+    def get_serializer_context(self):
+        """Add request to serializer context for is_favorite calculation"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 class AvailableGearItemListAPIView(generics.ListAPIView):
     """Return list of gear items according to filtered search"""
@@ -38,6 +42,12 @@ class AvailableGearItemListAPIView(generics.ListAPIView):
     def get_queryset(self):
         queryset = super().get_queryset().filter(location_privacy=GearItem.LocatiionPrivacy.PUBLIC).order_by('-created_at') 
         return queryset
+    
+    def get_serializer_context(self):
+        """Add request to serializer context for is_favorite calculation"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 
 class GearItemRetrieveAPIView(generics.RetrieveAPIView):
@@ -46,6 +56,12 @@ class GearItemRetrieveAPIView(generics.RetrieveAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = GearItemSerializer
     queryset = GearItem.objects.all()
+    
+    def get_serializer_context(self):
+        """Add request to serializer context for is_favorite calculation"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 
     def get_related_items(self, gear_item):
@@ -124,4 +140,3 @@ class GearItemToggleVisibilityAPIView(generics.UpdateAPIView):
         gear_item.is_public = not gear_item.is_public
         gear_item.save()
         return Response(status=status.HTTP_200_OK)
-        

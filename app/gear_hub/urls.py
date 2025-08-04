@@ -33,6 +33,7 @@ FAVORITE_URL_PATTERN = [
     path('create/', views.AddFavoriteCreateApiView.as_view(), name='create-favorite'),
     path('list/', views.ListFavoriteApiView.as_view(), name='list-favorite'),
     path('delete/<str:gear_item_id>/', views.AddFavoriteDestroyAPIView.as_view(), name='delete-favorite'),
+    path('add-by-email/', views.AddFavoriteByEmailAPIView.as_view(), name='add-favorite-by-email'),
 ]
 
 GEAR_CATEGORIES_URL_PATTERN = [
