@@ -3,6 +3,7 @@ from core.models import User
 
 class TrainingCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    style = models.CharField(max_length=100, unique=True, null=True, blank=True)
 
     def __str__(self):
         return self.name

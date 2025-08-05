@@ -5,7 +5,7 @@ from core.models import User
 class TrainingCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = TrainingCategory
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'style']
 
 class TrainingCourseListSerializer(serializers.ModelSerializer):
     """Serializer for listing training courses"""
