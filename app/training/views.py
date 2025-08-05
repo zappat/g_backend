@@ -36,6 +36,44 @@ class TrainingCourseDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TrainingCourseListSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    def destroy(self, request, *args, **kwargs):
+        try:
+            print(f"🔍 DELETE request received for training course")
+            print(f"📝 Request user: {request.user}")
+            print(f"📝 Request authenticated: {request.user.is_authenticated}")
+            print(f"📝 Request method: {request.method}")
+            print(f"📝 Request headers: {dict(request.headers)}")
+            
+            # Check if user is authenticated
+            if not request.user.is_authenticated:
+                return Response(
+                    {"error": "Authentication required"}, 
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            instance = self.get_object()
+            print(f"📝 Found instance: {instance.title}")
+            self.perform_destroy(instance)
+            print(f"✅ Training course deleted successfully")
+            return Response(
+                {"message": "Training course deleted successfully"}, 
+                status=status.HTTP_200_OK
+            )
+        except TrainingCourse.DoesNotExist:
+            print(f"❌ Training course not found")
+            return Response(
+                {"error": "Training course not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            print(f"❌ Training course deletion error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"error": f"An error occurred while deleting the training course: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 class TrainingCategoryListCreateView(generics.ListCreateAPIView):
     queryset = TrainingCategory.objects.all()
     serializer_class = TrainingCategorySerializer
