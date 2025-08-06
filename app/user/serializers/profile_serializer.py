@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from user.models import MerchantProfile, RenterProfile, EquipmentCategory
+from user.models import MerchantProfile, RenterProfile
 
 
 class MerchantProfileSerializer(serializers.ModelSerializer):
@@ -15,6 +15,10 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
                   'about', 'linkedin_url', 'instagram_url', 'equipment_categories')
 
     def validate(self, attrs):
+        print(f"🔍 MerchantProfileSerializer.validate() called with attrs: {attrs}")
+        print(f"🔍 Request method: {self.context['request'].method}")
+        print(f"🔍 Request user: {self.context['request'].user}")
+        
         if MerchantProfile.objects.filter(user=self.context['request'].user).exists() and self.context['request'].method == "POST":
             raise ValidationError("Merchant Profile already exists")
         return super().validate(attrs)
@@ -25,6 +29,7 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
         return profile
 
     def update(self, instance, validated_data):
+        print(f"🔍 MerchantProfileSerializer.update() called with validated_data: {validated_data}")
         profile_picture = validated_data.get('profile_picture', None)
         if profile_picture and instance.profile_picture and instance.profile_picture.name != 'profile-photo/default.png':
             instance.profile_picture.delete(save=False)
