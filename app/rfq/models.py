@@ -4,12 +4,12 @@ from user.models import EquipmentCategory
 
 class RFQ(models.Model):
     STATUS_CHOICES = [
-        ('open', 'Open'),
-        ('closed', 'Closed'),
+        ('Open', 'Open'),
+        ('Closed', 'Closed'),
     ]
     VISIBILITY_CHOICES = [
-        ('public', 'Public'),
-        ('private', 'Private'),
+        ('Public', 'Public'),
+        ('Private', 'Private'),
     ]
 
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -21,9 +21,11 @@ class RFQ(models.Model):
     equipment_categories = models.ManyToManyField(EquipmentCategory)
     notes_per_category = models.TextField(blank=True, null=True)
     expiry_date = models.DateField(blank=True, null=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='open')
-    visibility = models.CharField(max_length=10, choices=VISIBILITY_CHOICES, default='public')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Open')
+    visibility = models.CharField(max_length=10, choices=VISIBILITY_CHOICES, default='Public')
     created_at = models.DateTimeField(auto_now_add=True)
+    saved = models.BooleanField(default=False)
+
 
     def __str__(self):
         return f"RFQ: {self.title or self.id} by {self.created_by}"

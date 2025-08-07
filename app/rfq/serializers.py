@@ -33,6 +33,7 @@ class RFQSerializer(serializers.ModelSerializer):
             'visibility',
             'created_at',
             'attachments',
+            'saved',
         ]
 
     def to_internal_value(self, data):
@@ -128,19 +129,10 @@ class RFQSerializer(serializers.ModelSerializer):
             processed_data = processed_data.copy()
             processed_data['expiry_date'] = None
         
-        # Handle status - convert to lowercase to match model choices
-        if 'status' in processed_data and isinstance(processed_data['status'], str):
-            processed_data = processed_data.copy()
-            processed_data['status'] = processed_data['status'].lower()
-        
-        # Handle visibility - convert to lowercase to match model choices
-        if 'visibility' in processed_data and isinstance(processed_data['visibility'], str):
-            processed_data = processed_data.copy()
-            processed_data['visibility'] = processed_data['visibility'].lower()
-        
-        # Handle notes_per_category - ensure it's valid JSON
-        if 'notes_per_category' in processed_data and isinstance(processed_data['notes_per_category'], str):
-            processed_data = processed_data.copy()
-            processed_data['notes_per_category'] = processed_data['notes_per_category']
+        # Handle notes_per_category - it's a TextField, not JSONField
+        if 'notes_per_category' in processed_data:
+            if isinstance(processed_data['notes_per_category'], str) and not processed_data['notes_per_category'].strip():
+                processed_data = processed_data.copy()
+                processed_data['notes_per_category'] = ''
         
         return super().to_internal_value(processed_data) 

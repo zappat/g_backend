@@ -16,7 +16,13 @@ class MerchantProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
             # Return a default merchant profile or raise an error
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("User must be authenticated to access merchant profile")
-        return self.request.user.merchantprofile
+        
+        # Try to get the merchant profile, create one if it doesn't exist
+        try:
+            return self.request.user.merchantprofile
+        except MerchantProfile.DoesNotExist:
+            # Create a new merchant profile for the user
+            return MerchantProfile.objects.create(user=self.request.user)
     
     def update(self, request, *args, **kwargs):
         try:
@@ -58,8 +64,46 @@ class RenterProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
             # Return a default renter profile or raise an error
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("User must be authenticated to access renter profile")
-        return self.request.user.renterprofile
+        
+        # Try to get the renter profile, create one if it doesn't exist
+        try:
+            print("/////", self.request.user.renterprofile)
+            return self.request.user.renterprofile
+        except RenterProfile.DoesNotExist:
+            # Create a new renter profile for the user
+            return RenterProfile.objects.create(user=self.request.user)
     
+
+class RenterProfileDetailAPIView(generics.RetrieveAPIView):
+    """Get renter profile by user ID"""
+    
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = RenterProfileSerializer
+    queryset = RenterProfile.objects.all()
+    
+    def get_object(self):
+        """Get renter profile by user ID from URL parameter"""
+        user_id = self.kwargs.get('pk')
+        if not user_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("User ID is required")
+        
+        try:
+            # Get the user first
+            from core.models import User
+            user = User.objects.get(id=user_id)
+            
+            # Try to get the renter profile, create one if it doesn't exist
+            try:
+                return user.renterprofile
+            except RenterProfile.DoesNotExist:
+                # Create a new renter profile for the user
+                return RenterProfile.objects.create(user=user)
+                
+        except User.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("User not found")
+
 
 class RenterProfileDeleteAPIView(generics.DestroyAPIView):
     """Delete renter profile object"""

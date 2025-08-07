@@ -28,6 +28,11 @@ RENTER_PROFILE_URL_PATTERNS = [
         name='renter-create-retrive-update'
     ),
     path(
+        '<int:pk>/',
+        views.RenterProfileDetailAPIView.as_view(),
+        name='renter-profile-detail'
+    ),
+    path(
         'delete/<str:pk>/',
         views.RenterProfileDeleteAPIView.as_view(),
         name='renter-delete'

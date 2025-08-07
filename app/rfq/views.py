@@ -4,6 +4,8 @@ from .serializers import RFQSerializer, RFQAttachmentSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
+
 
 class RFQListCreateView(generics.ListCreateAPIView):
     queryset = RFQ.objects.all()
@@ -50,6 +52,34 @@ class RFQDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = RFQSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+
+class RFQSaveView(APIView):
+    """Save/Unsave an RFQ"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request, rfq_id):
+        try:
+            rfq = RFQ.objects.get(id=rfq_id)
+            rfq.saved = not rfq.saved  # Toggle saved status
+            rfq.save()
+            
+            return Response({
+                'id': rfq.id,
+                'saved': rfq.saved,
+                'message': f"RFQ {'saved' if rfq.saved else 'unsaved'} successfully"
+            }, status=status.HTTP_200_OK)
+        except RFQ.DoesNotExist:
+            return Response(
+                {"error": "RFQ not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class RFQAttachmentUploadView(generics.CreateAPIView):
     queryset = RFQAttachment.objects.all()
     serializer_class = RFQAttachmentSerializer
@@ -61,4 +91,4 @@ class RFQAttachmentUploadView(generics.CreateAPIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
