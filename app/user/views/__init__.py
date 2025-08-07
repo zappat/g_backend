@@ -3,3 +3,4 @@ from .identity_verification_views import *
 from .profile_views import *
 from .login_views import *
 from .email_verification_views import *
+from .equipment_category_views import *

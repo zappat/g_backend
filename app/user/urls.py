@@ -57,9 +57,15 @@ USER_URL_PATTERNS = [
     path('resend-verification-code/', views.ResendVerificationCodeView.as_view(), name='resend-verification-code'),
 ]
 
+EQUIPMENT_CATEGORY_URL_PATTERNS = [
+    path('', views.EquipmentCategoryListAPIView.as_view(), name='equipment-categories'),
+    path('<int:pk>/', views.EquipmentCategoryDetailAPIView.as_view(), name='equipment-category-detail'),
+]
+
 urlpatterns = [
     path('merchant-profile/', include(MERCHANT_PROFILE_URL_PATTERNS)),
     path('renter-profile/', include(RENTER_PROFILE_URL_PATTERNS)),
     path('identity-verification/', include(IDENTITY_VERFICATION_URL_PATTERNS)),
+    path('equipment-categories/', include(EQUIPMENT_CATEGORY_URL_PATTERNS)),
     path('', include(USER_URL_PATTERNS)),
 ]

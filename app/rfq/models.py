@@ -19,14 +19,14 @@ class RFQ(models.Model):
     rental_start_date = models.DateField()
     rental_end_date = models.DateField()
     equipment_categories = models.ManyToManyField(EquipmentCategory)
-    notes_per_category = models.JSONField(blank=True, null=True)
-    expiry_date = models.DateField()
+    notes_per_category = models.TextField(blank=True, null=True)
+    expiry_date = models.DateField(blank=True, null=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='open')
     visibility = models.CharField(max_length=10, choices=VISIBILITY_CHOICES, default='public')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"RFQ: {self.title or self.id} by {self.created_by}"  
+        return f"RFQ: {self.title or self.id} by {self.created_by}"
 
 class RFQAttachment(models.Model):
     rfq = models.ForeignKey(RFQ, on_delete=models.CASCADE, related_name='attachments')
