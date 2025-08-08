@@ -30,6 +30,24 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         print(f"🔍 MerchantProfileSerializer.update() called with validated_data: {validated_data}")
+        
+        # Handle delete_profile_picture from request data
+        request_data = self.context['request'].data
+        delete_profile_picture = request_data.get('delete_profile_picture', False)
+        
+        # Convert string to boolean if needed
+        if isinstance(delete_profile_picture, str):
+            delete_profile_picture = delete_profile_picture.lower() in ['true', '1', 'yes', 'on']
+        
+        if delete_profile_picture:
+            print(f"🔍 Deleting profile picture for user {instance.user.id}")
+            # Delete the current profile picture if it exists and is not default
+            if instance.profile_picture and instance.profile_picture.name != 'profile-photo/default.png':
+                instance.profile_picture.delete(save=False)
+            # Set profile picture to default
+            instance.profile_picture = 'profile-photo/default.png'
+        
+        # Handle regular profile picture update
         profile_picture = validated_data.get('profile_picture', None)
         if profile_picture and instance.profile_picture and instance.profile_picture.name != 'profile-photo/default.png':
             instance.profile_picture.delete(save=False)
@@ -65,6 +83,24 @@ class RenterProfileSerializer(serializers.ModelSerializer):
         return profile
 
     def update(self, instance, validated_data):
+        # Handle delete_profile_picture from request data
+        request_data = self.context['request'].data
+        delete_profile_picture = request_data.get('delete_profile_picture', False)
+        
+        # Convert string to boolean if needed
+        if isinstance(delete_profile_picture, str):
+            delete_profile_picture = delete_profile_picture.lower() in ['true', '1', 'yes', 'on']
+        
+        print("delete_profile_picture", delete_profile_picture)
+        if delete_profile_picture:
+            print(f"🔍 Deleting profile picture for user {instance.user.id}")
+            # Delete the current profile picture if it exists and is not default
+            if instance.profile_picture and instance.profile_picture.name != 'profile-photo/default.png':
+                instance.profile_picture.delete(save=False)
+            # Set profile picture to default
+            instance.profile_picture = 'profile-photo/default.png'
+        
+        # Handle regular profile picture update
         profile_picture = validated_data.get('profile_picture', None)
         if profile_picture and instance.profile_picture and instance.profile_picture.name != 'profile-photo/default.png':
             instance.profile_picture.delete(save=False)
@@ -72,7 +108,7 @@ class RenterProfileSerializer(serializers.ModelSerializer):
         cover_picture = validated_data.get('cover_picture', None)
         if cover_picture and instance.cover_picture and instance.cover_picture.name != 'cover-photo/default.png':
             instance.cover_picture.delete(save=False)
-
+            
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 

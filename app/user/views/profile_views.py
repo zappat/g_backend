@@ -67,7 +67,7 @@ class RenterProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
         
         # Try to get the renter profile, create one if it doesn't exist
         try:
-            print("/////", self.request.user.renterprofile)
+            print("Incoming data for ", self.request.user.renterprofile)
             return self.request.user.renterprofile
         except RenterProfile.DoesNotExist:
             # Create a new renter profile for the user
