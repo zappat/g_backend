@@ -76,3 +76,30 @@ class TrainingCourseCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"created_by": f"User with email '{created_by_email}' does not exist"})
         
         return super().create(validated_data) 
+
+    def update(self, instance, validated_data):
+        # Resolve and map category from a provided string name
+        category_name = validated_data.pop('category', None)
+        if category_name is not None:
+            if category_name == "":
+                validated_data['category'] = None
+            else:
+                try:
+                    category = TrainingCategory.objects.get(name__iexact=category_name)
+                    validated_data['category'] = category
+                except TrainingCategory.DoesNotExist:
+                    raise serializers.ValidationError({"category": f"Category '{category_name}' does not exist"})
+
+        # Resolve and map created_by from a provided email
+        created_by_email = validated_data.pop('created_by', None)
+        if created_by_email is not None:
+            if created_by_email == "":
+                validated_data['created_by'] = None
+            else:
+                try:
+                    user = User.objects.get(email=created_by_email)
+                    validated_data['created_by'] = user
+                except User.DoesNotExist:
+                    raise serializers.ValidationError({"created_by": f"User with email '{created_by_email}' does not exist"})
+
+        return super().update(instance, validated_data)
