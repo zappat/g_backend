@@ -138,3 +138,143 @@ class GearItemSerializer(serializers.ModelSerializer):
             )
         
         return gear_item
+
+    def update(self, instance, validated_data):
+        # Handle potential non-model fields first
+        new_pictures = validated_data.pop('gear_item_pictures', None)
+
+        # Resolve equipment_category from various frontend formats
+        equipment_input = validated_data.pop('equipment_category', None)
+        if equipment_input is not None:
+            resolved_category = None
+
+            # If dict provided
+            if isinstance(equipment_input, dict):
+                candidate_id = equipment_input.get('id')
+                candidate_name = equipment_input.get('name') or equipment_input.get('category_name')
+
+                if candidate_id and not resolved_category:
+                    try:
+                        resolved_category = GearCategories.objects.get(id=candidate_id)
+                    except GearCategories.DoesNotExist:
+                        resolved_category = None
+
+                if candidate_name and not resolved_category:
+                    resolved_category = GearCategories.objects.filter(
+                        category_name__iexact=candidate_name
+                    ).first()
+
+                if candidate_id and not resolved_category:
+                    try:
+                        from user.models import EquipmentCategory
+                        user_cat = EquipmentCategory.objects.get(pk=candidate_id)
+                        resolved_category = GearCategories.objects.filter(
+                            category_name__iexact=user_cat.name
+                        ).first()
+                    except Exception:
+                        resolved_category = None
+
+            # If string provided (UUID, numeric id from user EquipmentCategory, or name)
+            elif isinstance(equipment_input, str):
+                try:
+                    from uuid import UUID
+                    UUID(equipment_input)
+                    resolved_category = GearCategories.objects.get(id=equipment_input)
+                except Exception:
+                    if equipment_input.isdigit():
+                        try:
+                            from user.models import EquipmentCategory
+                            user_cat = EquipmentCategory.objects.get(pk=int(equipment_input))
+                            resolved_category = GearCategories.objects.get(
+                                category_name__iexact=user_cat.name
+                            )
+                        except Exception:
+                            resolved_category = None
+                    else:
+                        try:
+                            resolved_category = GearCategories.objects.get(
+                                category_name__iexact=equipment_input
+                            )
+                        except GearCategories.DoesNotExist:
+                            resolved_category = None
+
+            # If integer provided (likely user EquipmentCategory id)
+            elif isinstance(equipment_input, int):
+                try:
+                    from user.models import EquipmentCategory
+                    user_cat = EquipmentCategory.objects.get(pk=equipment_input)
+                    resolved_category = GearCategories.objects.get(
+                        category_name__iexact=user_cat.name
+                    )
+                except Exception:
+                    resolved_category = None
+
+            if not resolved_category:
+                raise serializers.ValidationError({
+                    "equipment_category": "Invalid equipment_category. Provide a valid GearCategories id, name, or a user EquipmentCategory id that maps by name."
+                })
+
+            validated_data['equipment_category'] = resolved_category
+
+        # Resolve provider from various frontend formats
+        provider_input = validated_data.pop('provider', None)
+        if provider_input is not None:
+            resolved_provider = None
+
+            try:
+                from core.models import User
+                from user.models import MerchantProfile
+            except Exception:
+                User = None
+                MerchantProfile = None
+
+            if isinstance(provider_input, dict):
+                candidate_id = provider_input.get('id')
+                candidate_email = provider_input.get('email')
+                candidate_display = provider_input.get('display_name') or provider_input.get('name')
+
+                if candidate_id and User and not resolved_provider:
+                    resolved_provider = User.objects.filter(pk=candidate_id).first()
+                if candidate_email and User and not resolved_provider:
+                    resolved_provider = User.objects.filter(email__iexact=candidate_email).first()
+                if candidate_display and MerchantProfile and not resolved_provider:
+                    merchant_profile = MerchantProfile.objects.filter(display_name__iexact=candidate_display).first()
+                    resolved_provider = getattr(merchant_profile, 'user', None)
+
+            elif isinstance(provider_input, (int,)) and User:
+                resolved_provider = User.objects.filter(pk=provider_input).first()
+
+            elif isinstance(provider_input, str):
+                if provider_input.isdigit() and User:
+                    resolved_provider = User.objects.filter(pk=int(provider_input)).first()
+                elif User:
+                    # try email first
+                    resolved_provider = User.objects.filter(email__iexact=provider_input).first()
+                    if not resolved_provider and MerchantProfile:
+                        merchant_profile = MerchantProfile.objects.filter(display_name__iexact=provider_input).first()
+                        resolved_provider = getattr(merchant_profile, 'user', None)
+
+            if not resolved_provider:
+                raise serializers.ValidationError({
+                    "provider": "Invalid provider. Provide a valid user id, email, or merchant display name."
+                })
+
+            validated_data['provider'] = resolved_provider
+
+        # Perform the update
+        instance = super().update(instance, validated_data)
+
+        # If new pictures are provided, replace all existing pictures with the new set
+        if new_pictures:
+            # Delete all existing pictures for this gear item
+            GearItemPicture.objects.filter(gear_item=instance).delete()
+
+            # Create the new picture set; first photo becomes the cover photo
+            for index, photo in enumerate(new_pictures):
+                GearItemPicture.objects.create(
+                    gear_item=instance,
+                    image=photo,
+                    is_cover_photo=(index == 0)
+                )
+
+        return instance
