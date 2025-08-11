@@ -13,6 +13,10 @@ class RFQListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
+    def get_queryset(self):
+        # Return RFQs ordered by id (newest first)
+        return RFQ.objects.all().order_by('-id')
+
     def perform_create(self, serializer):
         rfq = serializer.save(created_by=self.request.user)
         
@@ -92,3 +96,38 @@ class RFQAttachmentUploadView(generics.CreateAPIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class RFQUpdateView(generics.UpdateAPIView):
+    queryset = RFQ.objects.all()
+    serializer_class = RFQSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def update(self, request, *args, **kwargs):
+        try:
+            partial = kwargs.pop('partial', False)
+            instance = self.get_object()
+
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+
+            files = request.FILES.getlist('attachments')
+            # If the attachments key is present in the formdata explicitly but carries no files,
+            # treat it as a request to clear all existing attachments
+            if files == []:
+                print("Clearing all attachments")
+                RFQAttachment.objects.filter(rfq=serializer.instance).delete()
+
+            # If files are provided, replace all existing attachments with the new files
+            if files:
+                RFQAttachment.objects.filter(rfq=serializer.instance).delete()
+                for file in files:
+                    RFQAttachment.objects.create(rfq=serializer.instance, file=file)
+
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
