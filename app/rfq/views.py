@@ -14,8 +14,17 @@ class RFQListCreateView(generics.ListCreateAPIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
-        # Return RFQs ordered by id (newest first)
-        return RFQ.objects.all().order_by('-id')
+        # Public can view only public RFQs; authenticated users see all
+        base_qs = RFQ.objects.all()
+        if not self.request.user.is_authenticated:
+            base_qs = base_qs.filter(visibility='Public')
+        return base_qs.order_by('-id')
+
+    def get_permissions(self):
+        # Allow unauthenticated read-only access; write requires authentication
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
 
     def perform_create(self, serializer):
         rfq = serializer.save(created_by=self.request.user)
@@ -55,6 +64,18 @@ class RFQDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = RFQ.objects.all()
     serializer_class = RFQSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Restrict unauthenticated access to public RFQs only
+        if not self.request.user.is_authenticated:
+            return RFQ.objects.filter(visibility='Public')
+        return RFQ.objects.all()
+
+    def get_permissions(self):
+        # Allow unauthenticated read-only access; write requires authentication
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
 
 
 class RFQSaveView(APIView):
@@ -96,6 +117,22 @@ class RFQAttachmentUploadView(generics.CreateAPIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class RFQCloseView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, pk):
+        try:
+            rfq = RFQ.objects.get(id=pk)
+            rfq.status = 'Closed'
+            rfq.save()
+            return Response({"id": rfq.id, "status": rfq.status}, status=status.HTTP_200_OK)
+        except RFQ.DoesNotExist:
+            return Response({"error": "RFQ not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request, pk):
+        # Support POST as well
+        return self.put(request, pk)
     
 class RFQUpdateView(generics.UpdateAPIView):
     queryset = RFQ.objects.all()
@@ -112,11 +149,12 @@ class RFQUpdateView(generics.UpdateAPIView):
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
 
-            files = request.FILES.getlist('attachments')
-            # If the attachments key is present in the formdata explicitly but carries no files,
-            # treat it as a request to clear all existing attachments
-            if files == []:
-                print("Clearing all attachments")
+            # Aggregate files from common keys used by frontends
+            files = list(request.FILES.getlist('attachments')) + list(request.FILES.getlist('attachments[]'))
+
+            # Detect explicit empty attachments intent: key present but no files
+            has_attachments_key = ('attachments' in request.data) or ('attachments[]' in request.data)
+            if has_attachments_key and not files:
                 RFQAttachment.objects.filter(rfq=serializer.instance).delete()
 
             # If files are provided, replace all existing attachments with the new files
@@ -131,3 +169,11 @@ class RFQUpdateView(generics.UpdateAPIView):
                 {"error": f"An error occurred: {str(e)}"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class RFQDeleteView(generics.DestroyAPIView):
+    queryset = RFQ.objects.all()
+    serializer_class = RFQSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
