@@ -11,3 +11,11 @@ class Quote(models.Model):
 
     def __str__(self):
         return f"Quote for RFQ {self.rfq.id}"
+    
+class QuoteAttachment(models.Model):
+    quote = models.ForeignKey(Quote, on_delete=models.CASCADE)
+    file = models.FileField(upload_to='quote_attachments/')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Attachment for Quote {self.quote.id}"
