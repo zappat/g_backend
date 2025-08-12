@@ -54,4 +54,3 @@ class QuoteDetailView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
-
