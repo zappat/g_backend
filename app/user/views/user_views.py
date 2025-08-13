@@ -11,7 +11,9 @@ from django.conf import settings
 import random
 from django.utils import timezone
 from datetime import timedelta
-
+from rest_framework.views import APIView
+import uuid
+from django.db.models import Q
 
 class CreateUserView(generics.CreateAPIView):
     """Create a new user in the system"""
@@ -83,3 +85,5 @@ class UserDeleteApiView(generics.DestroyAPIView):
     serializer_class = UserSerializer
     permission_classes = (permissions.IsAuthenticated, )
     queryset = get_user_model().objects.all()
+
+       

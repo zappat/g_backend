@@ -15,10 +15,16 @@ MERCHANT_PROFILE_URL_PATTERNS = [
         name='merchant-create-retrive-update'
     ),
     path(
+        '<int:pk>/',
+        views.MerchantProfileDetailAPIView.as_view(),
+        name='merchant-profile-detail'
+    ),
+    path(
         'delete/<str:pk>/',
         views.MerchantProfileDeleteAPIView.as_view(),
         name='merchant-delete'
-    )
+    ),
+    path('by-merchant-ids/', views.MerchantsByMerchantIdsAPIView.as_view(), name='merchants-by-merchant-ids'),
 ]
 
 RENTER_PROFILE_URL_PATTERNS = [
