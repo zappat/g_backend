@@ -249,3 +249,11 @@ EMAIL_HOST_PASSWORD = 'Direct6161!'
 
 # settings.py
 GDAL_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgdal.so'
+
+# Stripe
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', STRIPE_SECRET_KEY)
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID')
+STRIPE_SUCCESS_URL = os.environ.get('STRIPE_SUCCESS_URL')
+STRIPE_CANCEL_URL = os.environ.get('STRIPE_CANCEL_URL')

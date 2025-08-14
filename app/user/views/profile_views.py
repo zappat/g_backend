@@ -3,12 +3,21 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
 import uuid
+import stripe
+from django.conf import settings
+from django.http import JsonResponse
+from django.http import HttpResponse, HttpResponseNotAllowed
+from django.utils import timezone
+import os
 
+from core.models import User
 from user.serializers import UserSerializer
 from user.serializers import MerchantProfileSerializer, RenterProfileSerializer
 from user.models import MerchantProfile, RenterProfile
 
+stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', None) or getattr(settings, 'STRIPE_API_KEY', None)
 
 class MerchantProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
     """Retrieve Update merchant profile object"""
@@ -55,7 +64,6 @@ class MerchantProfileDetailAPIView(generics.RetrieveAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = MerchantProfileSerializer
     queryset = MerchantProfile.objects.all()
-
 
 class MerchantProfileDeleteAPIView(generics.DestroyAPIView):
     """Delete merchant profile object"""
@@ -124,6 +132,152 @@ class MerchantsByMerchantIdsAPIView(APIView):
         merchant_ids = [part.strip() for part in merchant_ids_param.split(",") if part.strip()]
         return self._fetch(merchant_ids)
 
+
+@csrf_exempt
+def create_checkout_session(request):
+    if request.method not in ['GET', 'POST']:
+        return HttpResponseNotAllowed(['GET', 'POST'])
+
+    # Prefer query params; allow POST form/body as fallback; then settings; then hardcoded dev defaults
+    price_id = 'price_1RvqO9CioQm1zjDsOAJNr3C3'
+    success_url = 'https://www.google.com'
+    cancel_url = 'https://www.google.com'
+    quantity = 1
+    
+    # Ensure API key is set (prefer STRIPE_API_KEY if available)
+    stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', None)
+    print("stripe.api_key",stripe.api_key)
+
+    # Prepare metadata and client reference
+    metadata = {}
+    client_ref = None
+    if getattr(request, 'user', None) and getattr(request.user, 'is_authenticated', False):
+        client_ref = str(request.user.id)
+        try:
+            metadata['merchant_profile_id'] = str(request.user.merchantprofile.id)
+        except Exception:
+            pass
+
+    try:
+        session = stripe.checkout.Session.create(
+            mode='subscription',
+            line_items=[{
+                'price': price_id,
+                'quantity': quantity,
+            }],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            client_reference_id=client_ref,
+            metadata=metadata or None,
+        )
+        return JsonResponse({'id': session.id, 'url': session.url})
+    except Exception as e:
+        return JsonResponse({'detail': str(e)}, status=400)
+
+
+class StripeWebhookView(APIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        payload = request.body
+        sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+        endpoint_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', None)
+
+        if not endpoint_secret:
+            return Response({'detail': 'Webhook secret not configured'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload=payload,
+                sig_header=sig_header,
+                secret=endpoint_secret,
+            )
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        event_type = event.get('type')
+        data = event.get('data', {}).get('object', {})
+
+        try:
+            if event_type == 'checkout.session.completed':
+                # Identify merchant profile
+                metadata = data.get('metadata') or {}
+                merchant_profile_id = metadata.get('merchant_profile_id')
+                profile = None
+                if merchant_profile_id:
+                    try:
+                        profile = MerchantProfile.objects.get(id=merchant_profile_id)
+                    except MerchantProfile.DoesNotExist:
+                        profile = None
+                if profile is None:
+                    client_ref = data.get('client_reference_id')
+                    if client_ref:
+                        try:
+                            user = User.objects.get(id=client_ref)
+                            profile = getattr(user, 'merchantprofile', None)
+                        except User.DoesNotExist:
+                            profile = None
+
+                if profile is not None:
+                    # Determine expiration
+                    expires_at = None
+                    subscription_id = data.get('subscription')
+                    if subscription_id:
+                        try:
+                            sub = stripe.Subscription.retrieve(subscription_id)
+                            cpe = sub.get('current_period_end')
+                            if cpe:
+                                expires_at = timezone.datetime.fromtimestamp(int(cpe), tz=timezone.utc)
+                        except Exception:
+                            pass
+                    if not expires_at:
+                        cpe = data.get('current_period_end')
+                        if cpe:
+                            try:
+                                expires_at = timezone.datetime.fromtimestamp(int(cpe), tz=timezone.utc)
+                            except Exception:
+                                expires_at = None
+
+                    profile.is_pro = True
+                    profile.pro_expires_at = expires_at
+                    profile.save()
+
+            elif event_type in ('customer.subscription.updated', 'customer.subscription.created'):
+                metadata = data.get('metadata') or {}
+                merchant_profile_id = metadata.get('merchant_profile_id')
+                if merchant_profile_id:
+                    try:
+                        profile = MerchantProfile.objects.get(id=merchant_profile_id)
+                        cpe = data.get('current_period_end')
+                        expires_at = None
+                        if cpe:
+                            try:
+                                expires_at = timezone.datetime.fromtimestamp(int(cpe), tz=timezone.utc)
+                            except Exception:
+                                expires_at = None
+                        profile.is_pro = True
+                        profile.pro_expires_at = expires_at
+                        profile.save()
+                    except MerchantProfile.DoesNotExist:
+                        pass
+
+            elif event_type in ('customer.subscription.deleted', 'invoice.payment_failed'):
+                metadata = data.get('metadata') or {}
+                merchant_profile_id = metadata.get('merchant_profile_id')
+                if merchant_profile_id:
+                    try:
+                        profile = MerchantProfile.objects.get(id=merchant_profile_id)
+                        profile.is_pro = False
+                        profile.pro_expires_at = timezone.now()
+                        profile.save()
+                    except MerchantProfile.DoesNotExist:
+                        pass
+        except Exception:
+            # swallow internal errors to avoid webhook retries storm
+            pass
+
+        return Response({'received': True}, status=status.HTTP_200_OK)
+
 class RenterProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
     """Retrieve Update renter profile object"""
     
@@ -138,7 +292,6 @@ class RenterProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
         
         # Try to get the renter profile, create one if it doesn't exist
         try:
-            print("Incoming data for ", self.request.user.renterprofile)
             return self.request.user.renterprofile
         except RenterProfile.DoesNotExist:
             # Create a new renter profile for the user

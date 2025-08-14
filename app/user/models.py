@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
+from datetime import timedelta
 
 from core.mixins import UUIDBase
 from core.models import User
@@ -42,9 +44,24 @@ class MerchantProfile(UUIDBase):
     linkedin_url = models.URLField(blank=True, null=True)
     instagram_url = models.URLField(blank=True, null=True)
     equipment_categories = models.CharField(max_length=255, blank=True)
+    is_pro = models.BooleanField(default=False)
+    pro_expires_at = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.pk} - {self.user.email}"
+
+    def activate_pro(self, months=1):
+        self.is_pro = True
+        if self.pro_expires_at  and self.pro_expires_at > timezone.now():
+            self.pro_expires_at += timedelta(days=30 * months)
+        else:
+            self.pro_expires_at = timezone.now() + timedelta(days=30 * months)
+        self.save()
+
+    def check_pro_status(self):
+        if self.pro_expires_at and self.pro_expires_at < timezone.now():
+            self.is_pro = False
+            self.save()
 
 class EquipmentCategory(models.Model):
     name = models.CharField(max_length=50, unique=True)

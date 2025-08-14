@@ -25,6 +25,8 @@ MERCHANT_PROFILE_URL_PATTERNS = [
         name='merchant-delete'
     ),
     path('by-merchant-ids/', views.MerchantsByMerchantIdsAPIView.as_view(), name='merchants-by-merchant-ids'),
+    path('create-checkout-session/', views.create_checkout_session, name='create-checkout-session'),
+    path('stripe/webhook/', views.StripeWebhookView.as_view(), name='merchant-pro-stripe-webhook'),
 ]
 
 RENTER_PROFILE_URL_PATTERNS = [

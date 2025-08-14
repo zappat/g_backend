@@ -10,9 +10,12 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MerchantProfile
-        fields = ('id', 'user', 'profile_picture', 'cover_picture',
-                  'display_name', 'contact_email', 'location', 'website_url',
-                  'about', 'linkedin_url', 'instagram_url', 'equipment_categories')
+        fields = (
+            'id', 'user', 'profile_picture', 'cover_picture',
+            'display_name', 'contact_email', 'location', 'website_url',
+            'about', 'linkedin_url', 'instagram_url', 'equipment_categories',
+            'is_pro', 'pro_expires_at',
+        )
 
     def validate(self, attrs):
         print(f"🔍 MerchantProfileSerializer.validate() called with attrs: {attrs}")
