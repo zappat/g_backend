@@ -15,3 +15,6 @@ shapely>=2.0.0,<2.1
 pyproj>=3.5.0,<3.6
 django-extensions>=4.1,<4.2
 stripe>=6.0.0,<7.0.0
+channels>=4.0.0,<5.0.0
+daphne>=4.0.0,<5.0.0
+channels_redis>=4.1.0,<5.0.0

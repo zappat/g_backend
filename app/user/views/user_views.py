@@ -46,12 +46,11 @@ class CreateUserView(generics.CreateAPIView):
         try:
             print(f"📧 Attempting to send verification email to: {email}")
             print(f"📧 Using SMTP settings: {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
-            print(f"📧 From: office@dpdrent.ro")
             
             send_mail(
                 'Your Verification Code',
                 f'Your verification code is: {code}',
-                'office@dpdrent.ro',
+                'noreply@niwebsolutions.agency',
                 [email],
                 fail_silently=False,
             )

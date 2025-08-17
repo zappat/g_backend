@@ -60,8 +60,20 @@ INSTALLED_APPS = [
     'quote',
     'django_filters',
     'django.contrib.gis',
-    'django_extensions'
+    'django_extensions',
+    "channels",
 ]
+
+ASGI_APPLICATION = 'app.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("redis", 6379)],
+        },
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -237,15 +249,31 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+# WebSocket CORS settings
+CORS_ALLOWED_ORIGINS_REGEXES = [
+    r"^http://localhost:\d+$",
+    r"^http://127\.0\.0\.1:\d+$",
+    r"^http://13\.60\.183\.13(:\d+)?$",
+]
+
+# Allow WebSocket upgrade headers
+CORS_ALLOW_HEADERS += [
+    'upgrade',
+    'connection',
+    'sec-websocket-key',
+    'sec-websocket-version',
+    'sec-websocket-protocol',
+]
+
 CSRF_TRUSTED_ORIGINS = ['https://*.gearhire.live']
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'mail.dpdrent.ro'
-EMAIL_PORT = 465
-EMAIL_USE_SSL = True
-EMAIL_HOST_USER = 'office@dpdrent.ro'
-EMAIL_HOST_PASSWORD = 'Direct6161!'
+EMAIL_HOST = 'smtp.niwebsolutions.agency'
+EMAIL_PORT = 587
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = 'noreply@niwebsolutions.agency'
+EMAIL_HOST_PASSWORD = 'Hg0a3fff7'
 
 # settings.py
 GDAL_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgdal.so'

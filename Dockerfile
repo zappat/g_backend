@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY ./requirements.txt /tmp/requirements.txt
 COPY ./requirements.dev.txt /tmp/requirements.dev.txt
+COPY ./startup.sh /startup.sh
 COPY ./app /app
 WORKDIR /app
 EXPOSE 8000
@@ -33,6 +34,9 @@ RUN python -m venv /py && \
     fi && \
     rm -rf /tmp
 
+# Make startup script executable before switching user
+RUN chmod +x /startup.sh
+
 # Create the user and switch to it
 RUN groupadd -r admin-user && useradd -r -g admin-user admin-user
 
@@ -40,4 +44,4 @@ USER admin-user
 
 ENV PATH="/py/bin:$PATH"
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["/startup.sh"]

@@ -8,13 +8,9 @@ services:
       - "8000:8000"
     volumes:
       - ./app:/app
-    command:
-      sh -c "python manage.py wait_for_db &&
-             python manage.py migrate &&
-             python manage.py seed_categories &&
-             python manage.py runserver 0.0.0.0:8000"
     depends_on:
       - db
+      - redis
     env_file:
       - .env/dev.env
 
@@ -26,6 +22,11 @@ services:
       - .env/dev.env
     ports:
       - "5432:5432"
+
+  redis:
+    image: redis:6-alpine
+    ports:
+      - "6379:6379"
 
 volumes:
   dev-db-data:
