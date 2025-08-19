@@ -8,12 +8,13 @@ ENV PYTHONUNBUFFERED 1
 RUN apt-get update && apt-get install -y \
     gdal-bin \
     libgdal-dev \ 
-    libgdal36 \
     libproj-dev \
     proj-bin \
     graphviz \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir gdal
 
 COPY ./requirements.txt /tmp/requirements.txt
 COPY ./requirements.dev.txt /tmp/requirements.dev.txt
