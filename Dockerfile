@@ -7,7 +7,8 @@ ENV PYTHONUNBUFFERED 1
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gdal-bin \
-    libgdal-dev \
+    libgdal-dev \ 
+    libgdal30 \
     libproj-dev \
     proj-bin \
     graphviz \
@@ -25,8 +26,8 @@ ARG DEV=false
 RUN python -m venv /py && \
     /py/bin/pip install --upgrade pip setuptools==57.5.0 wheel && \
     /py/bin/pip install --no-cache-dir --default-timeout=300 --retries=15 -r /tmp/requirements.txt && \
-    if [ $DEV = "true" ]; \
-        then /py/bin/pip install -r /tmp/requirements.dev.txt ; \
+    if [ "$DEV" = "true" ]; then \
+        /py/bin/pip install --no-cache-dir -r /tmp/requirements.dev.txt ; \
     fi && \
     rm -rf /tmp
 
