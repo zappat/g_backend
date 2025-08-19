@@ -132,6 +132,12 @@ class MerchantsByMerchantIdsAPIView(APIView):
         merchant_ids = [part.strip() for part in merchant_ids_param.split(",") if part.strip()]
         return self._fetch(merchant_ids)
 
+class GetAllMerchantsAPIView(generics.ListAPIView):
+    """Get all merchants"""
+    
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = MerchantProfileSerializer
+    queryset = MerchantProfile.objects.all()
 
 @csrf_exempt
 def create_checkout_session(request):
@@ -333,5 +339,12 @@ class RenterProfileDeleteAPIView(generics.DestroyAPIView):
     """Delete renter profile object"""
     
     permission_classes = (permissions.AllowAny, )  # Temporarily allow all access
+    serializer_class = RenterProfileSerializer
+    queryset = RenterProfile.objects.all()
+
+class GetAllRentersAPIView(generics.ListAPIView):
+    """Get all renters"""
+    
+    permission_classes = (permissions.AllowAny,)
     serializer_class = RenterProfileSerializer
     queryset = RenterProfile.objects.all()

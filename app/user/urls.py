@@ -24,6 +24,7 @@ MERCHANT_PROFILE_URL_PATTERNS = [
         views.MerchantProfileDeleteAPIView.as_view(),
         name='merchant-delete'
     ),
+    path('get-all-merchants/', views.GetAllMerchantsAPIView.as_view(), name='get-all-merchants'),
     path('by-merchant-ids/', views.MerchantsByMerchantIdsAPIView.as_view(), name='merchants-by-merchant-ids'),
     path('create-checkout-session/', views.create_checkout_session, name='create-checkout-session'),
     path('stripe/webhook/', views.StripeWebhookView.as_view(), name='merchant-pro-stripe-webhook'),
@@ -44,7 +45,8 @@ RENTER_PROFILE_URL_PATTERNS = [
         'delete/<str:pk>/',
         views.RenterProfileDeleteAPIView.as_view(),
         name='renter-delete'
-    )
+    ),
+    path('get-all-renters/', views.GetAllRentersAPIView.as_view(), name='get-all-renters'),
 ]
 
 IDENTITY_VERFICATION_URL_PATTERNS = [

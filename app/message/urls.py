@@ -1,9 +1,7 @@
-from rest_framework.routers import DefaultRouter
-from .views import ConversationViewSet, MessageViewSet, AttachmentViewSet
+from django.urls import path
+from .views import ConversationByEmail, MessagesByConversationIdAPIView
 
-router = DefaultRouter()
-router.register(r'conversations', ConversationViewSet, basename='conversation')
-router.register(r'messages', MessageViewSet, basename='message')
-router.register(r'attachments', AttachmentViewSet, basename='attachment')
-
-urlpatterns = router.urls 
+urlpatterns = [
+    path('conversations/', ConversationByEmail.as_view(), name='conversation-by-email'),
+    path('messages/', MessagesByConversationIdAPIView.as_view(), name='messages-by-conversation-id'),
+]
