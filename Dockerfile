@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED 1
 RUN apt-get update && apt-get install -y \
     gdal-bin \
     libgdal-dev \ 
-    libgdal30 \
+    libgdal32 \
     libproj-dev \
     proj-bin \
     graphviz \
