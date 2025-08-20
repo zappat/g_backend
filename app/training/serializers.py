@@ -28,12 +28,17 @@ class TrainingCourseListSerializer(serializers.ModelSerializer):
         ]
 
     def get_created_by(self, obj):
-        if obj.created_by:
-            return {
-                'id': obj.created_by.id,
-                'email': obj.created_by.email
-            }
-        return None
+        # Avoid triggering lazy load on a possibly orphaned FK which can raise DoesNotExist
+        created_by_id = getattr(obj, 'created_by_id', None)
+        if not created_by_id:
+            return None
+        user = User.objects.filter(id=created_by_id).only('id', 'email').first()
+        if not user:
+            return None
+        return {
+            'id': user.id,
+            'email': user.email,
+        }
 
 class TrainingCourseCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating training courses"""
