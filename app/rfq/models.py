@@ -6,6 +6,7 @@ class RFQ(models.Model):
     STATUS_CHOICES = [
         ('Open', 'Open'),
         ('Closed', 'Closed'),
+        ('Accepted', 'Accepted'),
     ]
     VISIBILITY_CHOICES = [
         ('Public', 'Public'),
@@ -21,7 +22,7 @@ class RFQ(models.Model):
     equipment_categories = models.ManyToManyField(EquipmentCategory)
     notes_per_category = models.TextField(blank=True, null=True)
     expiry_date = models.DateField(blank=True, null=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Open')
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='Open')
     visibility = models.CharField(max_length=10, choices=VISIBILITY_CHOICES, default='Public')
     created_at = models.DateTimeField(auto_now_add=True)
     saved = models.BooleanField(default=False)

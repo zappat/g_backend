@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions
 from .models import RFQ, RFQAttachment
 from .serializers import RFQSerializer, RFQAttachmentSerializer
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
@@ -138,7 +138,7 @@ class RFQUpdateView(generics.UpdateAPIView):
     queryset = RFQ.objects.all()
     serializer_class = RFQSerializer
     permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def update(self, request, *args, **kwargs):
         try:
@@ -165,6 +165,9 @@ class RFQUpdateView(generics.UpdateAPIView):
 
             return Response(serializer.data)
         except Exception as e:
+            print(f"RFQ Update error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return Response(
                 {"error": f"An error occurred: {str(e)}"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
