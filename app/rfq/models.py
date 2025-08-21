@@ -26,6 +26,7 @@ class RFQ(models.Model):
     visibility = models.CharField(max_length=10, choices=VISIBILITY_CHOICES, default='Public')
     created_at = models.DateTimeField(auto_now_add=True)
     saved = models.BooleanField(default=False)
+    views = models.PositiveIntegerField(default=0)
 
 
     def __str__(self):

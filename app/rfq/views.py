@@ -5,6 +5,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
+from quote.models import Quote
 
 
 class RFQListCreateView(generics.ListCreateAPIView):
@@ -180,3 +181,70 @@ class RFQDeleteView(generics.DestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
+
+
+class RFQQuoteCountView(APIView):
+    """
+    Returns the count of quotes for a specific RFQ
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            # Check if RFQ exists
+            rfq = RFQ.objects.filter(pk=pk).first()
+            if not rfq:
+                return Response(
+                    {"error": "RFQ not found"}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Count quotes for this RFQ
+            quote_count = Quote.objects.filter(rfq=pk).count()
+            
+            return Response({
+                "rfq_id": pk,
+                "quote_count": quote_count
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class RFQIncrementViewsView(APIView):
+    """
+    Increments the view count for a specific RFQ
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            # Check if RFQ exists and increment views atomically
+            rfq = RFQ.objects.filter(pk=pk).first()
+            if not rfq:
+                return Response(
+                    {"error": "RFQ not found"}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Increment views count atomically using F expression
+            from django.db.models import F
+            RFQ.objects.filter(pk=pk).update(views=F('views') + 1)
+            
+            # Get updated RFQ to return current view count
+            rfq.refresh_from_db()
+            
+            return Response({
+                "rfq_id": pk,
+                "views": rfq.views,
+                "message": "View count incremented successfully"
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

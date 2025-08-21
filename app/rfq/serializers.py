@@ -76,6 +76,7 @@ class RFQSerializer(serializers.ModelSerializer):
             'created_at',
             'attachments',
             'saved',
+            'views',
         ]
 
     def to_internal_value(self, data):
