@@ -67,13 +67,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 ev.expires_at = expires_at
                 ev.is_verified = False
                 ev.save()
-            # send_mail(
-            #     'Your Verification Code',
-            #     f'Your verification code is: {code}',
-            #     'noreply@niwebsolutions.agency',
-            #     [email],
-            #     fail_silently=False,
-            # )
-            # print(f"✅ Email sent successfully to {email}")
+            send_mail(
+                'Your Verification Code',
+                f'Your verification code is: {code}',
+                'noreply@niwebsolutions.agency',
+                [email],
+                fail_silently=False,
+            )
+            print(f"✅ Email sent successfully to {email}")
 
         return data
