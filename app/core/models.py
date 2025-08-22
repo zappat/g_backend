@@ -41,8 +41,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(max_length=255, unique=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    roles = models.JSONField(default=list)  # Store roles as a list
     role = models.CharField(
-        max_length=20, choices=UserRole.choices, default=UserRole.RENTER)
+        max_length=20, choices=UserRole.choices, default=UserRole.RENTER,
+        help_text='Legacy field - use roles instead')
 
     objects = UserManager()
 

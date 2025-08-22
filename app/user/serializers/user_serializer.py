@@ -13,14 +13,44 @@ class UserSerializer(serializers.ModelSerializer):
     merchant_profile = MerchantProfileSerializer(read_only=True)
     renter_profile = RenterProfileSerializer(read_only=True)
 
+    roles = serializers.ListField(
+        child=serializers.ChoiceField(choices=['merchant', 'renter']),
+        required=False,
+        write_only=True
+    )
+
     class Meta:
         model = get_user_model()
-        fields = ('id','email', 'password', 'role', 'merchant_profile', 'renter_profile')
-        extra_kwargs = {'password': {'write_only': True, 'min_length': 5}}
+        fields = ('id', 'email', 'password', 'role', 'roles', 'merchant_profile', 'renter_profile')
+        extra_kwargs = {
+            'password': {'write_only': True, 'min_length': 5},
+            'role': {'read_only': True}  # Make legacy role field read-only
+        }
     
     def create(self, validated_data):
         """Create a user and return access and refresh token."""
-        return get_user_model().objects.create_user(**validated_data)
+        # Extract roles from validated data
+        roles = validated_data.pop('roles', ['renter'])  # Default to ['renter'] if not provided
+        
+        # Set the legacy role field to the first role
+        validated_data['role'] = roles[0] if roles else 'renter'
+        
+        # Create user
+        user = get_user_model().objects.create_user(**validated_data)
+        
+        # Set the new roles field
+        user.roles = roles
+        user.save()
+        
+        # Create profiles based on roles
+        if 'merchant' in roles:
+            from user.models import MerchantProfile
+            MerchantProfile.objects.get_or_create(user=user)
+        if 'renter' in roles:
+            from user.models import RenterProfile
+            RenterProfile.objects.get_or_create(user=user)
+        
+        return user
 
     def update(self, instance, validated_data):
         """Update and return user."""

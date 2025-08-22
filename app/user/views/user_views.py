@@ -25,6 +25,7 @@ class CreateUserView(generics.CreateAPIView):
         instance = super(CreateUserView, self).post(request, *args, **kwargs)
         email = instance.data.get('email')
         user = get_user_model().objects.get(email=email)
+        print(f"🔑 User created: {user}")
         token = get_tokens_for_user(user)
 
         # Send verification code

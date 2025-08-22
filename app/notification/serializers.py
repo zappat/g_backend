@@ -5,6 +5,7 @@ from core.models import User
 
 class NotificationSerializer(serializers.ModelSerializer):
     recipient_email = serializers.CharField(source='recipient.email', read_only=True)
+    sender_email = serializers.CharField(source='sender.email', read_only=True)
     
     class Meta:
         model = Notification
@@ -12,6 +13,8 @@ class NotificationSerializer(serializers.ModelSerializer):
             'id',
             'recipient',
             'recipient_email',
+            'sender',
+            'sender_email',
             'title',
             'message',
             'notification_type',
