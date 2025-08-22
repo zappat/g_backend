@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'message',
     'review',
     'quote',
+    'notification',
     'django_filters',
     'django.contrib.gis',
     'django_extensions',
