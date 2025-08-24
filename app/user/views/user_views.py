@@ -86,4 +86,52 @@ class UserDeleteApiView(generics.DestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, )
     queryset = get_user_model().objects.all()
 
+
+class UpdateUserByEmailView(generics.UpdateAPIView):
+    """Update a user by their email address"""
+    serializer_class = UserSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    lookup_field = 'email'
+    queryset = get_user_model().objects.all()
+
+    def update(self, request, *args, **kwargs):
+        try:
+            # Get the user instance
+            instance = self.get_object()
+            
+            # Handle role update
+            role = request.data.get('role')
+            if role:
+                # Validate role value
+                if role not in ['merchant', 'renter']:
+                    return Response(
+                        {'error': 'Invalid role. Must be either "merchant" or "renter"'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Update role directly
+                instance.role = role
+                instance.save()
+            
+            # Perform other updates if any
+            other_data = {k: v for k, v in request.data.items() if k != 'role'}
+            if other_data:
+                serializer = self.get_serializer(instance, data=other_data, partial=True)
+                serializer.is_valid(raise_exception=True)
+                self.perform_update(serializer)
+            else:
+                serializer = self.get_serializer(instance)
+            
+            return Response(serializer.data)
+            
+        except get_user_model().DoesNotExist:
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
        

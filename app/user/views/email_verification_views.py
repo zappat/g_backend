@@ -61,11 +61,11 @@ class ResendVerificationCodeView(APIView):
             ev.expires_at = expires_at
             ev.is_verified = False
             ev.save()
-        send_mail(
-            'Your Verification Code',
-            f'Your verification code is: {code}',
-            'noreply@yourdomain.com',
-            [email],
-            fail_silently=False,
-        )
+        # send_mail(
+        #     'Your Verification Code',
+        #     f'Your verification code is: {code}',
+        #     'noreply@yourdomain.com',
+        #     [email],
+        #     fail_silently=False,
+        # )
         return Response({'detail': 'Verification code resent.'}, status=status.HTTP_200_OK) 

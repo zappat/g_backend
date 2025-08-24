@@ -1,6 +1,8 @@
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
 from core.models import User
 from .models import Notification
@@ -100,60 +102,89 @@ class NotificationDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class NotificationMarkReadView(APIView):
     """
-    Mark one or multiple notifications as read
+    Mark one or multiple notifications as read.
+    Supports:
+    - GET/POST /notifications/mark-read/{pk}/ for single notification
+    - POST /notifications/mark-read/ with notification_ids in body for batch update
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request):
-        serializer = NotificationMarkReadSerializer(data=request.data)
-        if serializer.is_valid():
-            notification_ids = serializer.validated_data['notification_ids']
+    def _mark_single_notification(self, pk, user):
+        """Helper method to mark a single notification as read"""
+        try:
+            notification = Notification.objects.get(
+                id=pk,
+                recipient=user
+            )
             
-            # Update notifications for current user only
-            updated_count = Notification.objects.filter(
-                id__in=notification_ids,
-                recipient=request.user,
-                is_read=False
-            ).update(is_read=True)
+            if notification.is_read:
+                return Response({
+                    'message': 'Notification was already marked as read'
+                }, status=status.HTTP_200_OK)
+            
+            notification.is_read = True
+            notification.save()
             
             return Response({
-                'message': f'Marked {updated_count} notifications as read',
-                'updated_count': updated_count
+                'message': 'Notification marked as read successfully'
             }, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Notification.DoesNotExist:
+            return Response(
+                {'error': 'Notification not found or you do not have permission to access it'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'An error occurred: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def get(self, request, pk=None):
+        if pk is None:
+            return Response(
+                {'error': 'Notification ID is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return self._mark_single_notification(pk, request.user)
 
 
 class NotificationMarkAllReadView(APIView):
     """
-    Mark all notifications as read for the current user
+    Mark all notifications as read for the current user.
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request):
-        updated_count = Notification.objects.filter(
-            recipient=request.user,
-            is_read=False
-        ).update(is_read=True)
-        
-        return Response({
-            'message': f'Marked all {updated_count} notifications as read',
-            'updated_count': updated_count
-        }, status=status.HTTP_200_OK)
-
-
-class NotificationUnreadCountView(APIView):
-    """
-    Get unread notification count for current user
-    """
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        unread_count = Notification.objects.filter(
-            recipient=request.user,
-            is_read=False
-        ).count()
-        
-        return Response({
-            'unread_count': unread_count
-        }, status=status.HTTP_200_OK)
+    def get(self, request, *args, **kwargs):
+        try:
+            # Get unread notifications
+            unread = Notification.objects.filter(
+                recipient=request.user,
+                is_read=False
+            )
+            count = unread.count()
+            
+            if count == 0:
+                return Response({
+                    'message': 'No unread notifications found',
+                    'count': 0
+                })
+            
+            # Update them
+            unread.update(is_read=True)
+            
+            return Response({
+                'message': f'Marked {count} notifications as read',
+                'count': count
+            })
+            
+        except Exception as e:
+            import traceback
+            print(f"DEBUG: Error occurred: {str(e)}")
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    def post(self, request, *args, **kwargs):
+        return self.get(request, *args, **kwargs)

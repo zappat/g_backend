@@ -5,7 +5,6 @@ from .views import (
     NotificationDetailView,
     NotificationMarkReadView,
     NotificationMarkAllReadView,
-    NotificationUnreadCountView,
 )
 
 urlpatterns = [
@@ -17,7 +16,6 @@ urlpatterns = [
     path('notifications/detail/<int:pk>/', NotificationDetailView.as_view(), name='notification-detail'),
     
     # Utility endpoints
-    path('notifications/mark-read/', NotificationMarkReadView.as_view(), name='notification-mark-read'),
-    path('notifications/mark-all-read/', NotificationMarkAllReadView.as_view(), name='notification-mark-all-read'),
-    path('notifications/unread-count/', NotificationUnreadCountView.as_view(), name='notification-unread-count'),
+    path('notifications/mark-read/<int:pk>/', NotificationMarkReadView.as_view(), name='notification-mark-read-single'),
+    path('notifications/mark-read/all/', NotificationMarkAllReadView.as_view(), name='notification-mark-read-all'),
 ]

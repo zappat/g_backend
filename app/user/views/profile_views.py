@@ -72,6 +72,25 @@ class MerchantProfileDeleteAPIView(generics.DestroyAPIView):
     serializer_class = MerchantProfileSerializer
     queryset = MerchantProfile.objects.all()
 
+
+class MerchantProfileByEmailView(generics.RetrieveAPIView):
+    """Get merchant profile by user's email"""
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = MerchantProfileSerializer
+
+    def get_object(self):
+        email = self.kwargs.get('email')
+        try:
+            # Find the user by email
+            user = User.objects.get(email=email)
+            # Get or create their merchant profile
+            profile, created = MerchantProfile.objects.get_or_create(user=user)
+            return profile
+        except User.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound(f"No user found with email: {email}")
+
+
 class MerchantsByMerchantIdsAPIView(APIView):
     """Return users for a list of merchant profile IDs.
 
@@ -341,6 +360,24 @@ class RenterProfileDeleteAPIView(generics.DestroyAPIView):
     permission_classes = (permissions.AllowAny, )  # Temporarily allow all access
     serializer_class = RenterProfileSerializer
     queryset = RenterProfile.objects.all()
+
+
+class RenterProfileByEmailView(generics.RetrieveAPIView):
+    """Get renter profile by user's email"""
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = RenterProfileSerializer
+
+    def get_object(self):
+        email = self.kwargs.get('email')
+        try:
+            # Find the user by email
+            user = User.objects.get(email=email)
+            # Get or create their renter profile
+            profile, created = RenterProfile.objects.get_or_create(user=user)
+            return profile
+        except User.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound(f"No user found with email: {email}")
 
 class GetAllRentersAPIView(generics.ListAPIView):
     """Get all renters"""
