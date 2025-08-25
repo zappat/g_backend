@@ -62,12 +62,12 @@ class QuoteCreateSerializer(serializers.ModelSerializer):
 class QuoteSerializer(serializers.ModelSerializer):
     """Serializer for retrieving quotes with attachments"""
     attachments = QuoteAttachmentSerializer(many=True, read_only=True, source='quoteattachment_set')
-    created_by = serializers.IntegerField(source='created_by.id', read_only=True)
-    rfq = serializers.IntegerField(source='rfq.id', read_only=True)
+    created_by_id = serializers.IntegerField(source='created_by.id', read_only=True)
+    rfq_id = serializers.IntegerField(source='rfq.id', read_only=True)
 
     class Meta:
         model = Quote
         fields = [
             "id", "quote", "created_at", "updated_at",
-            "created_by", "rfq", "attachments"
+            "created_by_id", "rfq_id", "attachments"
         ]

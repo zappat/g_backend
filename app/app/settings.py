@@ -221,11 +221,16 @@ APPEND_SLASH = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
-    "http://13.60.183.13",
+    "http://13.60.183.13",  # Frontend on port 80
     "http://13.60.183.13:3000",
     "http://13.60.183.13:5173",
     "http://13.60.183.13:8080",
-    "http://13.60.183.13:8000"
+    "http://13.60.183.13:8000",  # Backend API
+    "https://13.60.183.13",  # HTTPS version
+    "https://13.60.183.13:3000",
+    "https://13.60.183.13:5173",
+    "https://13.60.183.13:8080",
+    "https://13.60.183.13:8000"
 ]
 
 # Additional CORS settings for better compatibility
@@ -249,13 +254,20 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'cache-control',
+    'pragma',
+    'x-forwarded-for',
+    'x-real-ip',
 ]
 
-# WebSocket CORS settings
+# WebSocket CORS settings and additional patterns
 CORS_ALLOWED_ORIGINS_REGEXES = [
     r"^http://localhost:\d+$",
     r"^http://127\.0\.0\.1:\d+$",
     r"^http://13\.60\.183\.13(:\d+)?$",
+    r"^https://localhost:\d+$",
+    r"^https://127\.0\.0\.1:\d+$",
+    r"^https://13\.60\.183\.13(:\d+)?$",
 ]
 
 # Allow WebSocket upgrade headers
