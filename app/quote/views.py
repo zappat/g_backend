@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 import json
 from .models import Quote, QuoteAttachment
-from .serializers import QuoteSerializer
+from .serializers import QuoteCreateSerializer, QuoteSerializer
 from message.models import Conversation, Message
 from message.serializers import MessageSerializer
 from core.models import User
@@ -18,7 +18,6 @@ from core.models import User
 
 class QuoteListCreateView(generics.ListCreateAPIView):
     queryset = Quote.objects.all().order_by('-id')
-    serializer_class = QuoteSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
@@ -28,6 +27,11 @@ class QuoteListCreateView(generics.ListCreateAPIView):
         if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return QuoteCreateSerializer
+        return QuoteSerializer
 
 
 class QuoteCountView(APIView):
@@ -87,31 +91,31 @@ class QuoteCountView(APIView):
 
     def create(self, request, *args, **kwargs):
         try:
+            # Handle FormData from frontend
             data = request.data.copy()
-            if 'created_by' in data:
-                del data['created_by']
 
-            serializer = self.get_serializer(data=data)
+            # Convert attachments to list if it's a single file or multiple files
+            if 'attachments' in request.FILES:
+                files = request.FILES.getlist('attachments')
+                data['attachments'] = files
+            else:
+                data['attachments'] = []
+
+            serializer = self.get_serializer(data=data, context={'request': request})
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            self.perform_create(serializer)
-
-            # Attach files if provided
-            files = list(request.FILES.getlist('attachments')) + list(request.FILES.getlist('attachments[]'))
-            for file in files:
-                QuoteAttachment.objects.create(quote=serializer.instance, file=file)
+            quote = serializer.save()
 
             # Create conversation and send message
-            self.create_quote_conversation_and_message(serializer.instance)
+            self.create_quote_conversation_and_message(quote)
 
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            # Return using the read serializer for consistent response format
+            response_serializer = QuoteSerializer(quote)
+            headers = self.get_success_headers(response_serializer.data)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except Exception as exc:
             return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
 
     def create_quote_conversation_and_message(self, quote):
         """Create conversation between provider and renter, and send quote as message"""
