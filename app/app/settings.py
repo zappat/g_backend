@@ -235,7 +235,7 @@ CORS_ALLOWED_ORIGINS = [
 
 # Additional CORS settings for better compatibility
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = TRUE
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
