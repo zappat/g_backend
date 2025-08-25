@@ -25,7 +25,8 @@ class RFQ(models.Model):
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='Open')
     visibility = models.CharField(max_length=10, choices=VISIBILITY_CHOICES, default='Public')
     created_at = models.DateTimeField(auto_now_add=True)
-    saved = models.BooleanField(default=False)
+    saved_by = models.ManyToManyField(User, related_name='saved_rfqs', blank=True)
+    reported_by = models.ManyToManyField(User, related_name='reported_rfqs', blank=True)
     views = models.PositiveIntegerField(default=0)
 
 

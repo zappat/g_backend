@@ -2,10 +2,13 @@ from rest_framework import generics, permissions
 from .models import RFQ, RFQAttachment
 from .serializers import RFQSerializer, RFQAttachmentSerializer
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django.http import QueryDict
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from quote.models import Quote
+from core.models import User
+from django.shortcuts import get_object_or_404
 
 
 class RFQListCreateView(generics.ListCreateAPIView):
@@ -77,34 +80,6 @@ class RFQDetailView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
-
-
-class RFQSaveView(APIView):
-    """Save/Unsave an RFQ"""
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def post(self, request, rfq_id):
-        try:
-            rfq = RFQ.objects.get(id=rfq_id)
-            rfq.saved = not rfq.saved  # Toggle saved status
-            rfq.save()
-            
-            return Response({
-                'id': rfq.id,
-                'saved': rfq.saved,
-                'message': f"RFQ {'saved' if rfq.saved else 'unsaved'} successfully"
-            }, status=status.HTTP_200_OK)
-        except RFQ.DoesNotExist:
-            return Response(
-                {"error": "RFQ not found"}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            return Response(
-                {"error": f"An error occurred: {str(e)}"}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
 
 class RFQAttachmentUploadView(generics.CreateAPIView):
     queryset = RFQAttachment.objects.all()
@@ -242,9 +217,226 @@ class RFQIncrementViewsView(APIView):
                 "views": rfq.views,
                 "message": "View count incremented successfully"
             }, status=status.HTTP_200_OK)
-            
+
         except Exception as e:
             return Response(
-                {"error": f"An error occurred: {str(e)}"}, 
+                {"error": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class RFQSavedView(APIView):
+    """
+    Save or unsave an RFQ for a user.
+    POST /api/rfq/rfqs/save/
+    Body: { "rfq_id": 123, "user": "user@example.com" }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        print("DEBUG: RFQSavedView.post called")
+        print(f"DEBUG: Request method: {request.method}")
+        print(f"DEBUG: Request content type: {request.content_type}")
+
+        try:
+            # Handle different content types - be careful about accessing request.data vs request.body
+            if 'text/plain' in request.content_type:
+                # Parse JSON from text/plain request - read body directly
+                import json
+                print(f"DEBUG: Request body: {request.body}")
+                try:
+                    data = json.loads(request.body.decode('utf-8'))
+                    print("DEBUG: Parsed data from body:", data)
+                except json.JSONDecodeError:
+                    return Response(
+                        {"error": "Invalid JSON in request body"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            elif request.content_type == 'application/json':
+                # Use request.data for JSON requests
+                print(f"DEBUG: Request data: {request.data}")
+                data = request.data
+            else:
+                # For other content types, try request.data but don't access body
+                print("DEBUG: Using request.data for other content types")
+                data = request.data
+
+            # Extract data from request
+            rfq_id = data.get('rfq_id')
+            user_email = data.get('user')
+            print("DEBUG: rfq_id:", rfq_id)
+            print("DEBUG: user_email:", user_email)
+
+            if not rfq_id or not user_email:
+                return Response(
+                    {"error": "Both 'rfq_id' and 'user' are required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Get the user
+            print("DEBUG: Looking up user with email:", user_email)
+            try:
+                user = User.objects.get(email=user_email)
+                print("DEBUG: User found:", user.id, user.email)
+            except User.DoesNotExist:
+                print("DEBUG: User not found with email:", user_email)
+                return Response(
+                    {"error": "User not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Get the RFQ
+            print("DEBUG: Looking up RFQ with id:", rfq_id)
+            try:
+                rfq = RFQ.objects.get(id=rfq_id)
+                print("DEBUG: RFQ found:", rfq.id, rfq.title)
+            except RFQ.DoesNotExist:
+                print("DEBUG: RFQ not found with id:", rfq_id)
+                return Response(
+                    {"error": "RFQ not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Check if user already saved this RFQ
+            print("DEBUG: Checking if user already saved this RFQ")
+            is_saved = rfq.saved_by.filter(id=user.id).exists()
+            print("DEBUG: is_saved:", is_saved)
+
+            if is_saved:
+                # Unsave the RFQ
+                print("DEBUG: Unsaving RFQ")
+                rfq.saved_by.remove(user)
+                action = "unsaved"
+                message = f"RFQ {rfq_id} unsaved successfully"
+                print("DEBUG: RFQ unsaved successfully")
+            else:
+                # Save the RFQ
+                print("DEBUG: Saving RFQ")
+                rfq.saved_by.add(user)
+                action = "saved"
+                message = f"RFQ {rfq_id} saved successfully"
+                print("DEBUG: RFQ saved successfully")
+
+            return Response({
+                "rfq_id": rfq_id,
+                "user": user_email,
+                "action": action,
+                "message": message,
+                "saved_count": rfq.saved_by.count()
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class RFQReportView(APIView):
+    """
+    Report or unreport an RFQ for a user.
+    POST /api/rfq/rfqs/report/
+    Body: { "rfq_id": 123, "user": "user@example.com" }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        print("DEBUG: RFQReportView.post called")
+        print(f"DEBUG: Request method: {request.method}")
+        print(f"DEBUG: Request content type: {request.content_type}")
+
+        try:
+            # Handle different content types - same logic as save view
+            if 'text/plain' in request.content_type:
+                # Parse JSON from text/plain request - read body directly
+                import json
+                print(f"DEBUG: Request body: {request.body}")
+                try:
+                    data = json.loads(request.body.decode('utf-8'))
+                    print("DEBUG: Parsed data from body:", data)
+                except json.JSONDecodeError:
+                    return Response(
+                        {"error": "Invalid JSON in request body"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            elif request.content_type == 'application/json':
+                # Use request.data for JSON requests
+                print(f"DEBUG: Request data: {request.data}")
+                data = request.data
+            else:
+                # For other content types, try request.data but don't access body
+                print("DEBUG: Using request.data for other content types")
+                data = request.data
+
+            # Extract data from request
+            rfq_id = data.get('rfq_id')
+            user_email = data.get('user')
+            print("DEBUG: rfq_id:", rfq_id)
+            print("DEBUG: user_email:", user_email)
+
+            if not rfq_id or not user_email:
+                return Response(
+                    {"error": "Both 'rfq_id' and 'user' are required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Get the user
+            print("DEBUG: Looking up user with email:", user_email)
+            try:
+                user = User.objects.get(email=user_email)
+                print("DEBUG: User found:", user.id, user.email)
+            except User.DoesNotExist:
+                print("DEBUG: User not found with email:", user_email)
+                return Response(
+                    {"error": "User not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Get the RFQ
+            print("DEBUG: Looking up RFQ with id:", rfq_id)
+            try:
+                rfq = RFQ.objects.get(id=rfq_id)
+                print("DEBUG: RFQ found:", rfq.id, rfq.title)
+            except RFQ.DoesNotExist:
+                print("DEBUG: RFQ not found with id:", rfq_id)
+                return Response(
+                    {"error": "RFQ not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Check if user already reported this RFQ
+            print("DEBUG: Checking if user already reported this RFQ")
+            is_reported = rfq.reported_by.filter(id=user.id).exists()
+            print("DEBUG: is_reported:", is_reported)
+
+            if is_reported:
+                # Unreport the RFQ
+                print("DEBUG: Unreporting RFQ")
+                rfq.reported_by.remove(user)
+                action = "unreported"
+                message = f"RFQ {rfq_id} unreported successfully"
+                print("DEBUG: RFQ unreported successfully")
+            else:
+                # Report the RFQ
+                print("DEBUG: Reporting RFQ")
+                rfq.reported_by.add(user)
+                action = "reported"
+                message = f"RFQ {rfq_id} reported successfully"
+                print("DEBUG: RFQ reported successfully")
+
+            return Response({
+                "rfq_id": rfq_id,
+                "user": user_email,
+                "action": action,
+                "message": message,
+                "reported_count": rfq.reported_by.count()
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            import traceback
+            print(f"DEBUG: Error occurred: {str(e)}")
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
+            return Response(
+                {"error": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

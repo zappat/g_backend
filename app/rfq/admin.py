@@ -8,7 +8,7 @@ class RFQAdmin(admin.ModelAdmin):
     list_filter = ('status', 'visibility', 'expiry_date')
     fields = ('title', 'description', 'pickup_location', 'rental_start_date', 'rental_end_date', 
               'equipment_categories', 'notes_per_category', 'expiry_date', 'status', 'visibility', 
-              'views', 'saved')
+              'views')
 
 @admin.register(RFQAttachment)
 class RFQAttachmentAdmin(admin.ModelAdmin):

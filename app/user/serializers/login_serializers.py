@@ -38,6 +38,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['name'] = None
         data['profile_image'] = None
         data['email'] = user.email
+        data['id'] = user.id
         if user.roles == ['merchant'] and hasattr(user, 'merchantprofile'):
             data['name'] = user.merchantprofile.display_name
             if user.merchantprofile.profile_picture:

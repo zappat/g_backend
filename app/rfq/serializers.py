@@ -57,6 +57,8 @@ class RFQSerializer(serializers.ModelSerializer):
     )
     created_by = serializers.PrimaryKeyRelatedField(read_only=True)
     expiry_date = serializers.DateField(required=False, allow_null=True)
+    saved_by = serializers.SerializerMethodField(read_only=True)
+    reported_by = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = RFQ
@@ -75,8 +77,9 @@ class RFQSerializer(serializers.ModelSerializer):
             'visibility',
             'created_at',
             'attachments',
-            'saved',
             'views',
+            'saved_by',
+            'reported_by',
         ]
 
     def to_internal_value(self, data):
@@ -178,4 +181,12 @@ class RFQSerializer(serializers.ModelSerializer):
                 processed_data = processed_data.copy()
                 processed_data['notes_per_category'] = ''
         
-        return super().to_internal_value(processed_data) 
+        return super().to_internal_value(processed_data)
+
+    def get_saved_by(self, obj):
+        """Return array of user IDs who have saved this RFQ"""
+        return list(obj.saved_by.values_list('id', flat=True))
+
+    def get_reported_by(self, obj):
+        """Return array of user IDs who have reported this RFQ"""
+        return list(obj.reported_by.values_list('id', flat=True)) 

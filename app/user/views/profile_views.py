@@ -381,7 +381,7 @@ class RenterProfileByEmailView(generics.RetrieveAPIView):
 
 class GetAllRentersAPIView(generics.ListAPIView):
     """Get all renters"""
-    
+
     permission_classes = (permissions.AllowAny,)
     serializer_class = RenterProfileSerializer
     queryset = RenterProfile.objects.all()

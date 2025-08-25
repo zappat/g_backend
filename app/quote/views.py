@@ -2,14 +2,18 @@ from rest_framework import generics, permissions
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db import models
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 import json
 from .models import Quote, QuoteAttachment
 from .serializers import QuoteSerializer
 from message.models import Conversation, Message
 from message.serializers import MessageSerializer
+from core.models import User
 
 
 class QuoteListCreateView(generics.ListCreateAPIView):
@@ -24,6 +28,62 @@ class QuoteListCreateView(generics.ListCreateAPIView):
         if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
+
+
+class QuoteCountView(APIView):
+    """
+    Get quote count for a specific user by email.
+    URL: /api/quote/quotes/count/{email}/
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, email):
+        try:
+            # Find user by email
+            user = get_object_or_404(User, email=email)
+            
+            # Get query parameters for filtering
+            status_filter = request.query_params.get('status', None)
+            rfq_filter = request.query_params.get('rfq', None)
+            
+            # Build queryset
+            queryset = Quote.objects.filter(created_by=user)
+            
+            # Apply filters if provided
+            if status_filter:
+                # You can add status filtering logic here if needed
+                pass
+                
+            if rfq_filter:
+                try:
+                    rfq_id = int(rfq_filter)
+                    queryset = queryset.filter(rfq_id=rfq_id)
+                except ValueError:
+                    pass
+            
+            # Get counts
+            total_quotes = queryset.count()
+            recent_quotes = queryset.filter(
+                created_at__gte=timezone.now() - timezone.timedelta(days=30)
+            ).count()
+            
+            return Response({
+                'user_email': email,
+                'total_quotes': total_quotes,
+                'recent_quotes': recent_quotes,
+                'quotes_this_month': recent_quotes
+            }, status=status.HTTP_200_OK)
+            
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User with this email not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'An error occurred: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def create(self, request, *args, **kwargs):
         try:
