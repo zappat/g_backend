@@ -21,6 +21,7 @@ class Message(models.Model):
     conversation = models.ForeignKey(Conversation, related_name='messages', on_delete=models.CASCADE)
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
     text = models.TextField(blank=True)
+    sender_role = models.TextField(blank=True)
     attachment = models.ForeignKey(Attachment, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)

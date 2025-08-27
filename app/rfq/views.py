@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from quote.models import Quote
 from core.models import User
 from django.shortcuts import get_object_or_404
+from django.db import models
 
 
 class RFQListCreateView(generics.ListCreateAPIView):
@@ -330,6 +331,43 @@ class RFQSavedView(APIView):
                 {"error": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class RFQByUserView(generics.ListAPIView):
+    """
+    Get RFQs created by a specific user.
+    GET /api/rfq/rfqs/get-by-user/<user_id>/
+    """
+    serializer_class = RFQSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user_id = self.kwargs.get('user_id')
+
+        if not user_id:
+            return RFQ.objects.none()
+
+        # Filter RFQs by created_by user ID
+        queryset = RFQ.objects.filter(created_by_id=user_id)
+
+        # Apply visibility filtering based on authentication and user permissions
+        if not self.request.user.is_authenticated:
+            # Unauthenticated users can only see public RFQs
+            queryset = queryset.filter(visibility='Public')
+        elif self.request.user.id != int(user_id):
+            # Authenticated users can see their own RFQs plus public RFQs from others
+            queryset = queryset.filter(
+                models.Q(visibility='Public') |
+                models.Q(created_by_id=self.request.user.id)
+            )
+
+        return queryset.order_by('-created_at')
+
+    def get_permissions(self):
+        # Allow unauthenticated read-only access; write requires authentication
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
 
 
 class RFQReportView(APIView):

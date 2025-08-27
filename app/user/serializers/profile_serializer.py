@@ -11,7 +11,7 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = MerchantProfile
         fields = (
-            'id', 'user', 'profile_picture', 'cover_picture',
+            'id', 'user', 'created_at', 'updated_at', 'profile_picture', 'cover_picture',
             'display_name', 'contact_email', 'location', 'website_url',
             'about', 'linkedin_url', 'instagram_url', 'equipment_categories',
             'is_pro', 'pro_expires_at',
@@ -71,7 +71,7 @@ class RenterProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RenterProfile
-        fields = ('id', 'user', 'profile_picture', 'cover_picture',
+        fields = ('id', 'user', 'created_at', 'updated_at', 'profile_picture', 'cover_picture',
                   'display_name', 'company_name', 'location', 'about',
                   'website_url', 'linkedin_url', 'instagram_url', 'vimeo_url', 'youtube_url')
 

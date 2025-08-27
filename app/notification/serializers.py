@@ -23,6 +23,7 @@ class NotificationSerializer(serializers.ModelSerializer):
             'updated_at',
             'related_object_id',
             'related_object_type',
+            'mode'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -36,6 +37,7 @@ class NotificationCreateSerializer(serializers.ModelSerializer):
             'recipient',
             'title',
             'message',
+            'mode',
             'notification_type',
             'related_object_id',
             'related_object_type',

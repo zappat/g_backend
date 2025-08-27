@@ -6,5 +6,5 @@ websocket_urlpatterns = [
     re_path(r"ws/chat/(?P<room_name>defaultRoom|merchantRoom|\w+Room)/?$", consumers.ChatConsumer.as_asgi()),
     
     # Notifications - saves to notification database
-    re_path(r"ws/notification/(?P<room_name>merchantNotificationRoom|\w+)/?$", consumers.NotificationConsumer.as_asgi()),
+    re_path(r"ws/notification/(?P<room_name>notificationRoom|\w+)/?$", consumers.NotificationConsumer.as_asgi()),
 ]

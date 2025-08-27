@@ -2,6 +2,7 @@ import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from django.db import models
 
 logger = logging.getLogger(__name__)
 
@@ -32,25 +33,76 @@ class ChatConsumer(AsyncWebsocketConsumer):
             data = json.loads(text_data)
             message_text = data.get('message', '')
             sender_email = data.get('sender', '')
+            sender_role = data.get('sender_role', '')
             conversation_id = data.get('conversation_id')
-            
-            if not message_text or not sender_email or not conversation_id:
+            message_type = data.get('type', 'general')
+            receiver = data.get('receiver')  # For quote messages
+
+            logger.info(f"Received message in room {self.room_name}: type={message_type}, sender={sender_email}, conversation_id={conversation_id}")
+
+            if not message_text or not sender_email:
                 await self.send(text_data=json.dumps({
-                    'error': 'Missing required fields: message, sender, conversation_id'
+                    'error': 'Missing required fields: message, sender'
+                }))
+                return
+
+            # Validate quote messages have required fields
+            if message_type == 'quote':
+                # Check for both rfq_id and rfqId to handle different naming conventions
+                rfq_id_value = data.get('rfqId') or data.get('rfq_id')
+                if not rfq_id_value:
+                    await self.send(text_data=json.dumps({
+                        'error': 'Missing required field: rfqId or rfq_id for quote messages'
+                    }))
+                    return
+
+            # Handle quote messages without conversation_id
+            if message_type == 'quote' and not conversation_id and receiver:
+                logger.info(f"Creating conversation for quote message: sender={sender_email}, receiver={receiver}")
+                conversation_id = await self.get_or_create_conversation_for_quote(
+                    sender_email, receiver
+                )
+                logger.info(f"Conversation created: {conversation_id}")
+                if not conversation_id:
+                    await self.send(text_data=json.dumps({
+                        'error': 'Could not create conversation for quote message'
+                    }))
+                    return
+            elif not conversation_id:
+                logger.warning(f"Missing conversation_id for message type {message_type} in room {self.room_name}")
+                await self.send(text_data=json.dumps({
+                    'error': 'Missing required field: conversation_id'
                 }))
                 return
 
             # Save message to database
+            rfq_id = (data.get('rfqId') or data.get('rfq_id')) if message_type == 'quote' else None
             message_obj = await self.save_message(
                 message_text=message_text,
                 sender_email=sender_email,
-                conversation_id=conversation_id
+                sender_role=sender_role,
+                conversation_id=conversation_id,
+                message_type=message_type,
+                rfq_id=rfq_id
             )
 
             if message_obj:
+                logger.info(f"Message saved successfully: {message_obj.id}, type: {message_type}")
+
                 # Serialize the message
                 message_data = await self.serialize_message(message_obj)
-                
+
+                # Add additional data for quote messages
+                if message_type == 'quote':
+                    message_data['type'] = 'quote'
+                    # Use the same logic to get rfq_id from either field name
+                    rfq_id_value = data.get('rfqId') or data.get('rfq_id')
+                    if rfq_id_value:
+                        message_data['rfqId'] = rfq_id_value
+                    if receiver:
+                        message_data['receiver'] = receiver
+                    logger.info(f"Quote message processed with rfqId: {rfq_id_value}")
+
                 # Send message to room group
                 await self.channel_layer.group_send(
                     self.room_group_name,
@@ -59,6 +111,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'message_data': message_data
                     }
                 )
+                logger.info(f"Message sent to room group: {self.room_group_name}")
             else:
                 await self.send(text_data=json.dumps({
                     'error': 'Failed to save message'
@@ -79,34 +132,113 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(event['message_data']))
 
     @database_sync_to_async
-    def save_message(self, message_text, sender_email, conversation_id):
+    def save_message(self, message_text, sender_email, sender_role, conversation_id, message_type='general', rfq_id=None):
         try:
             from .models import Message, Conversation
             from core.models import User
-            
+            from quote.models import Quote
+            from rfq.models import RFQ
+
             # Get sender user
             sender = User.objects.get(email=sender_email)
-            
+
             # Get conversation and verify user is participant
             conversation = Conversation.objects.get(id=conversation_id)
             if sender not in [conversation.user1, conversation.user2]:
                 logger.error(f"User {sender_email} not participant in conversation {conversation_id}")
                 return None
-            
+
+            # Save quote to database if this is a quote message
+            if message_type == 'quote':
+                if not rfq_id:
+                    logger.error("rfq_id is required for quote messages")
+                    return None
+
+                try:
+                    rfq = RFQ.objects.get(id=rfq_id)
+                    quote = Quote.objects.create(
+                        created_by=sender,
+                        quote=message_text,
+                        rfq=rfq
+                    )
+                    logger.info(f"Quote created: {quote.id} for RFQ {rfq_id} by {sender_email}")
+                except RFQ.DoesNotExist:
+                    logger.error(f"RFQ with id {rfq_id} does not exist")
+                    return None
+                except Exception as e:
+                    logger.error(f"Error creating quote: {str(e)}")
+                    return None
+
             # Create message
             message = Message.objects.create(
                 conversation=conversation,
                 sender=sender,
+                sender_role=sender_role,
                 text=message_text
             )
-            
+
             # Update conversation timestamp
             conversation.save()  # This will update updated_at
-            
+
             return message
-            
+
         except Exception as e:
             logger.error(f"Error saving message: {str(e)}")
+            return None
+
+    @database_sync_to_async
+    def get_or_create_conversation_for_quote(self, sender_email, receiver):
+        """Get existing conversation or create new one for quote messages"""
+        try:
+            from .models import Conversation
+            from core.models import User
+
+            # Get sender user
+            sender = User.objects.get(email=sender_email)
+            logger.info(f"Found sender user: {sender.email} (ID: {sender.id})")
+
+            # Get receiver user (can be email, user object, dict, or ID)
+            if isinstance(receiver, dict):
+                receiver_email = receiver.get('email')
+                if receiver_email:
+                    receiver_user = User.objects.get(email=receiver_email)
+                else:
+                    receiver_id = receiver.get('id')
+                    receiver_user = User.objects.get(id=receiver_id)
+            elif isinstance(receiver, str):
+                # Assume it's an email
+                receiver_user = User.objects.get(email=receiver)
+            elif isinstance(receiver, int):
+                # Handle integer user ID
+                receiver_user = User.objects.get(id=receiver)
+                logger.info(f"Found receiver user by ID: {receiver_user.email} (ID: {receiver_user.id})")
+            else:
+                logger.error(f"Unsupported receiver type: {type(receiver)} with value: {receiver}")
+                return None
+
+            # Don't create conversation if same user
+            if sender == receiver_user:
+                return None
+
+            # Find or create conversation between sender and receiver
+            conversation = Conversation.objects.filter(
+                models.Q(user1=sender, user2=receiver_user) |
+                models.Q(user1=receiver_user, user2=sender)
+            ).first()
+
+            if not conversation:
+                conversation = Conversation.objects.create(
+                    user1=sender,
+                    user2=receiver_user
+                )
+                logger.info(f"Created new conversation: {conversation.id} between {sender.email} and {receiver_user.email}")
+            else:
+                logger.info(f"Found existing conversation: {conversation.id} between {sender.email} and {receiver_user.email}")
+
+            return conversation.id
+
+        except Exception as e:
+            logger.error(f"Error getting/creating conversation for quote: {str(e)}")
             return None
 
     @database_sync_to_async
@@ -152,6 +284,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             notification_type = data.get('type', 'general')
             related_object_id = data.get('related_object_id')
             related_object_type = data.get('related_object_type')
+            mode = data.get('mode')
             
             if not title or not message_text or not recipient_id:
                 await self.send(text_data=json.dumps({
@@ -167,7 +300,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 sender=sender,
                 notification_type=notification_type,
                 related_object_id=related_object_id,
-                related_object_type=related_object_type
+                related_object_type=related_object_type,
+                mode=mode
             )
 
             if notification_obj:
@@ -202,7 +336,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(event['notification_data']))
 
     @database_sync_to_async
-    def save_notification(self, title, message_text, recipient_id, sender, notification_type, related_object_id, related_object_type):
+    def save_notification(self, title, message_text, recipient_id, sender, notification_type, related_object_id, related_object_type, mode):
         try:
             from notification.models import Notification
             from core.models import User
@@ -216,9 +350,9 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             except (ValueError, TypeError):
                 # If not integer, try as email
                 try:
-                    recipient_user = User.objects.get(email=recipient)
+                    recipient_user = User.objects.get(email=recipient_id)
                 except User.DoesNotExist:
-                    logger.error(f"User not found with email: {recipient}")
+                    logger.error(f"User not found with email: {recipient_id}")
                     return None
             except User.DoesNotExist:
                 logger.error(f"User not found with ID: {recipient_id}")
@@ -254,7 +388,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 message=message_text,
                 notification_type=notification_type,
                 related_object_id=related_object_id,
-                related_object_type=related_object_type
+                related_object_type=related_object_type,
+                mode=mode
             )
             
             sender_info = f" from {sender_user.email}" if sender_user else ""
