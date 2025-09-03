@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'quote',
     'notification',
     'follow',
+    'document_vault',
     'django_filters',
     'django.contrib.gis',
     'django_extensions',

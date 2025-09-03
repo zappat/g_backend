@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RFQListCreateView, RFQDetailView, RFQAttachmentUploadView, RFQUpdateView, RFQCloseView, RFQDeleteView, RFQQuoteCountView, RFQIncrementViewsView, RFQSavedView, RFQReportView, RFQByUserView
+from .views import RFQListCreateView, RFQDetailView, RFQAttachmentUploadView, RFQUpdateView, RFQCloseView, RFQDeleteView, RFQQuoteCountView, RFQIncrementViewsView, RFQSavedView, RFQReportView, RFQByUserView, RFQReportedByListView
 
 urlpatterns = [
     path('rfqs/', RFQListCreateView.as_view(), name='rfq-list-create'),
@@ -12,5 +12,6 @@ urlpatterns = [
     path('rfqs/attachments/upload/', RFQAttachmentUploadView.as_view(), name='rfq-attachment-upload'),
     path('rfqs/save/', RFQSavedView.as_view(), name='rfq-save'),
     path('rfqs/report/', RFQReportView.as_view(), name='rfq-report'),
+    path('rfqs/reported-by-list/', RFQReportedByListView.as_view(), name='rfq-reported-by-list'),
     path('rfqs/get-by-user/<int:user_id>/', RFQByUserView.as_view(), name='rfq-by-user'),
 ] 

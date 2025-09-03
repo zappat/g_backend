@@ -478,3 +478,41 @@ class RFQReportView(APIView):
                 {"error": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class RFQReportedByListView(APIView):
+    """
+    Get a list of all RFQs that have been reported by any users.
+    GET /api/rfq/rfqs/reported-by-list/
+    Returns a mapping of RFQ IDs to user IDs who reported them.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """
+        Return a mapping of RFQ IDs to user IDs who reported them
+        """
+        try:
+            # Get all RFQs that have been reported (have users in reported_by field)
+            # This returns RFQs reported by ANY user, not just the current user
+            reported_rfqs = RFQ.objects.filter(reported_by__isnull=False).distinct()
+            
+            # Create a simple mapping of RFQ ID to list of user IDs who reported it
+            rfq_user_mapping = {}
+            for rfq in reported_rfqs:
+                rfq_user_mapping[rfq.id] = list(rfq.reported_by.values_list('id', flat=True))
+            
+            return Response({
+                "rfq_user_mapping": rfq_user_mapping,
+                "total_reported_rfqs": len(rfq_user_mapping),
+                "message": "Returns mapping of RFQ IDs to user IDs who reported them"
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            import traceback
+            print(f"DEBUG: Error in RFQReportedByListView: {str(e)}")
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
+            return Response(
+                {"error": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

@@ -19,8 +19,18 @@ class GearItemListAPIView(generics.ListAPIView):
     pagination_class = StandardResultsSetPagination
     
     def get_queryset(self):
-        # Return all gear items, not filtered by provider
-        queryset = GearItem.objects.all().order_by('-created_at') 
+        queryset = GearItem.objects.all().order_by('-created_at')
+        
+        # Filter by provider if provider parameter is provided
+        provider_id = self.request.query_params.get('provider')
+        if provider_id:
+            try:
+                provider_id = int(provider_id)
+                queryset = queryset.filter(provider_id=provider_id)
+            except (ValueError, TypeError):
+                # If provider_id is not a valid integer, ignore the filter
+                pass
+        
         return queryset
     
     def get_serializer_context(self):

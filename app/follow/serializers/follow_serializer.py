@@ -54,21 +54,6 @@ class FollowCreateSerializer(serializers.Serializer):
         except User.DoesNotExist:
             raise serializers.ValidationError("Target user does not exist.")
 
-        # Validate role-based following
-        follower_role = request.user.role
-        following_role = target_user.role
-
-        if mode == 1:  # Renter following merchant
-            if follower_role != 'renter':
-                raise serializers.ValidationError("Only renters can follow merchants in mode 1.")
-            if following_role != 'merchant':
-                raise serializers.ValidationError("You can only follow merchants in mode 1.")
-        elif mode == 2:  # Merchant following renter
-            if follower_role != 'merchant':
-                raise serializers.ValidationError("Only merchants can follow renters in mode 2.")
-            if following_role != 'renter':
-                raise serializers.ValidationError("You can only follow renters in mode 2.")
-
         # Check if already following with the same mode
         if Follow.objects.filter(
             follower=request.user,
