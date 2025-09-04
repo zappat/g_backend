@@ -197,3 +197,57 @@ class QuoteDetailView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
+
+
+class QuoteByRFQIdsView(APIView):
+    """
+    Get quotes by array of RFQ IDs
+    URL: /api/quote/quotes/get-by-rfq-ids/
+    Method: POST
+    Body: {"rfq_ids": [1, 2, 3, ...]}
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            # Get rfq_ids from request body
+            rfq_ids = request.data.get('rfq_ids', [])
+            
+            if not rfq_ids:
+                return Response({
+                    'error': 'rfq_ids array is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not isinstance(rfq_ids, list):
+                return Response({
+                    'error': 'rfq_ids must be an array'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate that all rfq_ids are integers
+            try:
+                rfq_ids = [int(rfq_id) for rfq_id in rfq_ids]
+            except (ValueError, TypeError):
+                return Response({
+                    'error': 'All rfq_ids must be valid integers'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get quotes for the specified RFQ IDs
+            quotes = Quote.objects.filter(rfq_id__in=rfq_ids).order_by('-created_at')
+            
+            # Serialize the quotes
+            serializer = QuoteSerializer(quotes, many=True)
+            
+            return Response({
+                'quotes': serializer.data,
+                'total_count': quotes.count(),
+                'rfq_ids_requested': rfq_ids,
+                'rfq_ids_found': list(quotes.values_list('rfq_id', flat=True).distinct())
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            import traceback
+            print(f"DEBUG: Error in QuoteByRFQIdsView: {str(e)}")
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
+            return Response({
+                'error': f'An error occurred: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
