@@ -164,9 +164,9 @@ def create_checkout_session(request):
         return HttpResponseNotAllowed(['GET', 'POST'])
 
     # Prefer query params; allow POST form/body as fallback; then settings; then hardcoded dev defaults
-    price_id = 'price_1RvqO9CioQm1zjDsOAJNr3C3'
-    success_url = 'https://www.google.com'
-    cancel_url = 'https://www.google.com'
+    price_id = 'price_1S3PPRCWogwHqyflQbGpL0Z9'
+    success_url = 'http://localhost:3000/subscription?session_id={CHECKOUT_SESSION_ID}'
+    cancel_url = 'http://localhost:3000/subscription'
     quantity = 1
     
     # Ensure API key is set (prefer STRIPE_API_KEY if available)
@@ -195,7 +195,13 @@ def create_checkout_session(request):
             client_reference_id=client_ref,
             metadata=metadata or None,
         )
-        return JsonResponse({'id': session.id, 'url': session.url})
+        return JsonResponse({
+            'id': session.id, 
+            'url': session.url,
+            'success_url': success_url,  # This will be the template with {CHECKOUT_SESSION_ID}
+            'session_id': session.id,
+            'sessionId': session.id  # Add camelCase version for frontend compatibility
+        })
     except Exception as e:
         return JsonResponse({'detail': str(e)}, status=400)
 
@@ -203,105 +209,196 @@ def create_checkout_session(request):
 class StripeWebhookView(APIView):
     permission_classes = (permissions.AllowAny,)
 
+    def get(self, request, *args, **kwargs):
+        """Handle GET requests with session_id parameter from frontend"""
+        session_id = request.GET.get('session_id')
+        if not session_id:
+            return Response({'error': 'session_id parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Retrieve the checkout session from Stripe
+            session = stripe.checkout.Session.retrieve(session_id)
+            
+            # Process the session as if it was a webhook
+            return self._process_checkout_session(session, request)
+            
+        except stripe.error.InvalidRequestError:
+            return Response({'error': 'Invalid session_id'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def post(self, request, *args, **kwargs):
         payload = request.body
         sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-        endpoint_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', None)
-
-        if not endpoint_secret:
-            return Response({'detail': 'Webhook secret not configured'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            event = stripe.Webhook.construct_event(
-                payload=payload,
-                sig_header=sig_header,
-                secret=endpoint_secret,
-            )
-        except Exception as e:
-            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        event_type = event.get('type')
-        data = event.get('data', {}).get('object', {})
-
-        try:
-            if event_type == 'checkout.session.completed':
-                # Identify merchant profile
-                metadata = data.get('metadata') or {}
-                merchant_profile_id = metadata.get('merchant_profile_id')
-                profile = None
-                if merchant_profile_id:
-                    try:
-                        profile = MerchantProfile.objects.get(id=merchant_profile_id)
-                    except MerchantProfile.DoesNotExist:
-                        profile = None
-                if profile is None:
-                    client_ref = data.get('client_reference_id')
-                    if client_ref:
+        
+        # Check if this is a frontend call (has session_id in body) or Stripe webhook (has signature)
+        if sig_header:
+            # This is a Stripe webhook - validate signature
+            endpoint_secret = getattr(settings, 'STRIPE_SECRET_KEY', None)
+            if not endpoint_secret:
+                return Response({'detail': 'Stripe secret key not configured'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                event = stripe.Webhook.construct_event(
+                    payload=payload,
+                    sig_header=sig_header,
+                    secret=endpoint_secret,
+                )
+            except ValueError as e:
+                return Response({'detail': f'Invalid payload: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+            except stripe.error.SignatureVerificationError as e:
+                return Response({'detail': f'Invalid signature: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({'detail': f'Webhook error: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Process Stripe webhook event
+            event_type = event.get('type')
+            print("event_type", event_type)
+            data = event.get('data', {}).get('object', {})
+            
+            try:
+                if event_type == 'checkout.session.completed':
+                    # Use the shared method to process checkout session
+                    return self._process_checkout_session(data, request)
+                elif event_type in ('customer.subscription.updated', 'customer.subscription.created'):
+                    metadata = data.get('metadata') or {}
+                    merchant_profile_id = metadata.get('merchant_profile_id')
+                    if merchant_profile_id:
                         try:
-                            user = User.objects.get(id=client_ref)
-                            profile = getattr(user, 'merchantprofile', None)
-                        except User.DoesNotExist:
-                            profile = None
-
-                if profile is not None:
-                    # Determine expiration
-                    expires_at = None
-                    subscription_id = data.get('subscription')
-                    if subscription_id:
-                        try:
-                            sub = stripe.Subscription.retrieve(subscription_id)
-                            cpe = sub.get('current_period_end')
+                            profile = MerchantProfile.objects.get(id=merchant_profile_id)
+                            cpe = data.get('current_period_end')
+                            expires_at = None
                             if cpe:
-                                expires_at = timezone.datetime.fromtimestamp(int(cpe), tz=timezone.utc)
-                        except Exception:
+                                try:
+                                    expires_at = timezone.datetime.fromtimestamp(int(cpe), tz=timezone.utc)
+                                except Exception:
+                                    expires_at = None
+                            profile.is_pro = True
+                            profile.pro_expires_at = expires_at
+                            profile.save()
+                        except MerchantProfile.DoesNotExist:
                             pass
-                    if not expires_at:
-                        cpe = data.get('current_period_end')
-                        if cpe:
-                            try:
-                                expires_at = timezone.datetime.fromtimestamp(int(cpe), tz=timezone.utc)
-                            except Exception:
-                                expires_at = None
+                elif event_type in ('customer.subscription.deleted', 'invoice.payment_failed'):
+                    metadata = data.get('metadata') or {}
+                    merchant_profile_id = metadata.get('merchant_profile_id')
+                    if merchant_profile_id:
+                        try:
+                            profile = MerchantProfile.objects.get(id=merchant_profile_id)
+                            profile.is_pro = False
+                            profile.pro_expires_at = timezone.now()
+                            profile.save()
+                        except MerchantProfile.DoesNotExist:
+                            pass
+            except Exception:
+                # swallow internal errors to avoid webhook retries storm
+                pass
+            
+            return Response({'received': True}, status=status.HTTP_200_OK)
+        else:
+            # This is a frontend call - check for session_id in body
+            try:
+                import json
+                data = json.loads(payload)
+                session_id = data.get('session_id')
+                if not session_id:
+                    return Response({'error': 'session_id is required in request body'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Retrieve the checkout session from Stripe
+                session = stripe.checkout.Session.retrieve(session_id)
+                
+                # Process the session as if it was a webhook
+                return self._process_checkout_session(session, request)
+                
+            except json.JSONDecodeError:
+                return Response({'error': 'Invalid JSON in request body'}, status=status.HTTP_400_BAD_REQUEST)
+            except stripe.error.InvalidRequestError:
+                return Response({'error': 'Invalid session_id'}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                    profile.is_pro = True
-                    profile.pro_expires_at = expires_at
-                    profile.save()
-
-            elif event_type in ('customer.subscription.updated', 'customer.subscription.created'):
-                metadata = data.get('metadata') or {}
-                merchant_profile_id = metadata.get('merchant_profile_id')
-                if merchant_profile_id:
+    def _process_checkout_session(self, session_data, request=None):
+        """Process checkout session data for both webhook and direct calls"""
+        try:
+            # Identify merchant profile
+            metadata = session_data.get('metadata') or {}
+            merchant_profile_id = metadata.get('merchant_profile_id')
+            profile = None
+            
+            if merchant_profile_id:
+                try:
+                    profile = MerchantProfile.objects.get(id=merchant_profile_id)
+                except MerchantProfile.DoesNotExist:
+                    profile = None
+            
+            if profile is None:
+                client_ref = session_data.get('client_reference_id')
+                if client_ref:
                     try:
-                        profile = MerchantProfile.objects.get(id=merchant_profile_id)
-                        cpe = data.get('current_period_end')
-                        expires_at = None
-                        if cpe:
-                            try:
-                                expires_at = timezone.datetime.fromtimestamp(int(cpe), tz=timezone.utc)
-                            except Exception:
-                                expires_at = None
-                        profile.is_pro = True
-                        profile.pro_expires_at = expires_at
-                        profile.save()
-                    except MerchantProfile.DoesNotExist:
-                        pass
+                        user = User.objects.get(id=client_ref)
+                        profile = getattr(user, 'merchantprofile', None)
+                    except User.DoesNotExist:
+                        profile = None
+            
+            # If still no profile found and we have an authenticated request, use the authenticated user
+            if profile is None and request and hasattr(request, 'user') and request.user.is_authenticated:
+                try:
+                    profile = getattr(request.user, 'merchantprofile', None)
+                except Exception:
+                    profile = None
 
-            elif event_type in ('customer.subscription.deleted', 'invoice.payment_failed'):
-                metadata = data.get('metadata') or {}
-                merchant_profile_id = metadata.get('merchant_profile_id')
-                if merchant_profile_id:
+            if profile is not None:
+                # Determine expiration
+                expires_at = None
+                subscription_id = session_data.get('subscription')
+                if subscription_id:
                     try:
-                        profile = MerchantProfile.objects.get(id=merchant_profile_id)
-                        profile.is_pro = False
-                        profile.pro_expires_at = timezone.now()
-                        profile.save()
-                    except MerchantProfile.DoesNotExist:
+                        sub = stripe.Subscription.retrieve(subscription_id)
+                        cpe = sub.get('current_period_end')
+                        if cpe:
+                            expires_at = timezone.datetime.fromtimestamp(int(cpe), tz=timezone.utc)
+                    except Exception:
                         pass
-        except Exception:
-            # swallow internal errors to avoid webhook retries storm
-            pass
+                if not expires_at:
+                    cpe = session_data.get('current_period_end')
+                    if cpe:
+                        try:
+                            expires_at = timezone.datetime.fromtimestamp(int(cpe), tz=timezone.utc)
+                        except Exception:
+                            expires_at = None
 
-        return Response({'received': True}, status=status.HTTP_200_OK)
+                # Set pro_expires_at based on your requirements
+                from datetime import timedelta
+                current_time = timezone.now()
+                
+                if not profile.pro_expires_at or profile.pro_expires_at == "":
+                    # If pro_expires_at is null or empty, set to 30 days from current time
+                    profile.pro_expires_at = current_time + timedelta(days=30)
+                else:
+                    # If pro_expires_at already has a value, set to 30 days from expires_at date
+                    if expires_at:
+                        profile.pro_expires_at = expires_at + timedelta(days=30)
+                    else:
+                        # If no expires_at from Stripe, use current pro_expires_at + 30 days
+                        profile.pro_expires_at = profile.pro_expires_at + timedelta(days=30)
+
+                profile.is_pro = True
+                profile.save()
+                
+                return Response({
+                    'success': True,
+                    'message': 'Subscription activated successfully',
+                    'merchant_profile_id': str(profile.id),
+                    'is_pro': profile.is_pro,
+                    'pro_expires_at': profile.pro_expires_at
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'error': 'Merchant profile not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+                
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class RenterProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
     """Retrieve Update renter profile object"""
