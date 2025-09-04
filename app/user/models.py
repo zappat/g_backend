@@ -46,6 +46,7 @@ class MerchantProfile(UUIDBase):
     equipment_categories = models.CharField(max_length=255, blank=True)
     is_pro = models.BooleanField(default=False)
     pro_expires_at = models.DateTimeField(blank=True, null=True)
+    views = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"{self.pk} - {self.user.email}"

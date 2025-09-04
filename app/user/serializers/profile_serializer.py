@@ -14,7 +14,7 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
             'id', 'user', 'created_at', 'updated_at', 'profile_picture', 'cover_picture',
             'display_name', 'contact_email', 'location', 'website_url',
             'about', 'linkedin_url', 'instagram_url', 'equipment_categories',
-            'is_pro', 'pro_expires_at',
+            'is_pro', 'pro_expires_at', 'views',
         )
 
     def validate(self, attrs):

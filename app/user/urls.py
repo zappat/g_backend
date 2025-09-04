@@ -14,6 +14,7 @@ MERCHANT_PROFILE_URL_PATTERNS = [
     path('by-merchant-ids/', views.MerchantsByMerchantIdsAPIView.as_view(), name='merchants-by-merchant-ids'),
     path('create-checkout-session/', views.create_checkout_session, name='create-checkout-session'),
     path('stripe/webhook/', views.StripeWebhookView.as_view(), name='merchant-pro-stripe-webhook'),
+    path('increase-views/<str:merchant_id>/', views.IncreaseMerchantViewsAPIView.as_view(), name='increase-merchant-views'),
     path(
         'delete/<str:pk>/',
         views.MerchantProfileDeleteAPIView.as_view(),

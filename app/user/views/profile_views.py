@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
 import uuid
 import stripe
 from django.conf import settings
@@ -482,3 +483,42 @@ class GetAllRentersAPIView(generics.ListAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = RenterProfileSerializer
     queryset = RenterProfile.objects.all()
+
+
+class IncreaseMerchantViewsAPIView(APIView):
+    """
+    Increase views count for a merchant profile
+    URL: /api/user/merchant-profile/increase-views/{merchant_id}/
+    Method: POST
+    """
+    permission_classes = [permissions.AllowAny]  # Allow anyone to view merchant profiles
+
+    def post(self, request, merchant_id):
+        try:
+            # Get the merchant profile by ID
+            merchant_profile = get_object_or_404(MerchantProfile, id=merchant_id)
+            
+            # Increment the views count
+            merchant_profile.views += 1
+            merchant_profile.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Views count increased successfully',
+                'merchant_id': merchant_profile.id,
+                'current_views': merchant_profile.views,
+                'merchant_name': merchant_profile.display_name
+            }, status=status.HTTP_200_OK)
+            
+        except MerchantProfile.DoesNotExist:
+            return Response({
+                'error': 'Merchant profile not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+            
+        except Exception as e:
+            import traceback
+            print(f"DEBUG: Error in IncreaseMerchantViewsAPIView: {str(e)}")
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
+            return Response({
+                'error': f'An error occurred: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
