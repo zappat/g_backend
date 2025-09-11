@@ -3,9 +3,15 @@ from core.models import User
 from rfq.models import RFQ
 
 class Quote(models.Model):
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    ]
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     quote = models.TextField()
     rfq = models.ForeignKey(RFQ, on_delete=models.CASCADE)
+    status = models.CharField(max_length=255, default='open', choices=STATUS_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

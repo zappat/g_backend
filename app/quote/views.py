@@ -55,8 +55,11 @@ class QuoteCountView(APIView):
             
             # Apply filters if provided
             if status_filter:
-                # You can add status filtering logic here if needed
-                pass
+                try:
+                    quote_status = status_filter.lower()
+                    queryset = queryset.filter(status=quote_status)
+                except ValueError:
+                    pass
                 
             if rfq_filter:
                 try:
@@ -251,3 +254,35 @@ class QuoteByRFQIdsView(APIView):
             return Response({
                 'error': f'An error occurred: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class QuoteAcceptView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            quote = Quote.objects.get(id=pk)
+            quote.status = 'accepted'
+            quote.save()
+            return Response({"id": quote.id, "status": quote.status}, status=status.HTTP_200_OK)
+
+        except Quote.DoesNotExist:
+            return Response({"error": "Quote not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class QuoteRejectView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            quote = Quote.objects.get(id=pk)
+            quote.status = 'rejected'
+            quote.save()
+            return Response({"id": quote.id, "status": quote.status}, status=status.HTTP_200_OK)
+
+        except Quote.DoesNotExist:
+            return Response({"error": "Quote not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class QuoteDeleteView(APIView):
+    permission_classes = [permissions.IsAuthenticated]

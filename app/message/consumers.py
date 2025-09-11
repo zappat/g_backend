@@ -159,7 +159,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     quote = Quote.objects.create(
                         created_by=sender,
                         quote=message_text,
-                        rfq=rfq
+                        rfq=rfq,
+                        status='open'  # Explicitly set status
                     )
                     logger.info(f"Quote created: {quote.id} for RFQ {rfq_id} by {sender_email}")
                 except RFQ.DoesNotExist:

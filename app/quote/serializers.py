@@ -14,6 +14,7 @@ class QuoteCreateSerializer(serializers.ModelSerializer):
     Handles: rfq (string), quote (text), attachments (files)
     """
     rfq = serializers.CharField(write_only=True)  # Frontend sends as string
+    status = serializers.CharField(write_only=True)
     attachments = serializers.ListField(
         child=serializers.FileField(),
         required=False,
@@ -22,7 +23,7 @@ class QuoteCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Quote
-        fields = ["rfq", "quote", "attachments"]
+        fields = ["rfq", "quote", "attachments", "status"]
         read_only_fields = ["created_by", "created_at", "updated_at"]
 
     def validate_rfq(self, value):
@@ -40,7 +41,7 @@ class QuoteCreateSerializer(serializers.ModelSerializer):
         """Create quote with attachments"""
         attachments = validated_data.pop('attachments', [])
         rfq_id = validated_data.pop('rfq')
-
+        status = validated_data.pop('status')
         # Get the RFQ instance
         from rfq.models import RFQ
         rfq = RFQ.objects.get(id=rfq_id)
@@ -49,6 +50,7 @@ class QuoteCreateSerializer(serializers.ModelSerializer):
         quote = Quote.objects.create(
             rfq=rfq,
             created_by=self.context['request'].user,
+            status=status,
             **validated_data
         )
 
@@ -69,5 +71,5 @@ class QuoteSerializer(serializers.ModelSerializer):
         model = Quote
         fields = [
             "id", "quote", "created_at", "updated_at",
-            "created_by_id", "rfq_id", "attachments"
+            "created_by_id", "rfq_id", "attachments", "status"
         ]
