@@ -28,7 +28,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = True
 
 ALLOWED_HOSTS = [ 
-    "13.60.46.237", 
+    "16.171.226.144", 
     "localhost",
     "127.0.0.1",
     "0.0.0.0",
@@ -223,16 +223,16 @@ APPEND_SLASH = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
-    "http://13.60.46.237",  # Frontend on port 80
-    "http://13.60.46.237:3000",
-    "http://13.60.46.237:5173",
-    "http://13.60.46.237:8080",
-    "http://13.60.46.237:8000",  # Backend API
-    "https://13.60.46.237",  # HTTPS version
-    "https://13.60.46.237:3000",
-    "https://13.60.46.237:5173",
-    "https://13.60.46.237:8080",
-    "https://13.60.46.237:8000"
+    "http://16.171.226.144",  # Frontend on port 80
+    "http://16.171.226.144:3000",
+    "http://16.171.226.144:5173",
+    "http://16.171.226.144:8080",
+    "http://16.171.226.144:8000",  # Backend API
+    "https://16.171.226.144",  # HTTPS version
+    "https://16.171.226.144:3000",
+    "https://16.171.226.144:5173",
+    "https://16.171.226.144:8080",
+    "https://16.171.226.144:8000"
 ]
 
 # Additional CORS settings for better compatibility
