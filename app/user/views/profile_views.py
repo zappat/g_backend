@@ -166,8 +166,8 @@ def create_checkout_session(request):
 
     # Prefer query params; allow POST form/body as fallback; then settings; then hardcoded dev defaults
     price_id = 'price_1S3PPRCWogwHqyflQbGpL0Z9'
-    success_url = 'http://localhost:3000/subscription?session_id={CHECKOUT_SESSION_ID}'
-    cancel_url = 'http://localhost:3000/subscription'
+    success_url = 'http://13.60.46.237:3000/subscription?session_id={CHECKOUT_SESSION_ID}'
+    cancel_url = 'http://13.60.46.237:3000/subscription'
     quantity = 1
     
     # Ensure API key is set (prefer STRIPE_API_KEY if available)
