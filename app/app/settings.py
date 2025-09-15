@@ -301,3 +301,6 @@ STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
 STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID')
 STRIPE_SUCCESS_URL = os.environ.get('STRIPE_SUCCESS_URL')
 STRIPE_CANCEL_URL = os.environ.get('STRIPE_CANCEL_URL')
+
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
