@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RFQListCreateView, RFQDetailView, RFQAttachmentUploadView, RFQUpdateView, RFQCloseView, RFQDeleteView, RFQQuoteCountView, RFQIncrementViewsView, RFQSavedView, RFQReportView, RFQByUserView, RFQReportedByListView
+from .views import RFQListCreateView, RFQDetailView, RFQAttachmentUploadView, RFQUpdateView, RFQCloseView, RFQDeleteView, RFQQuoteCountView, RFQIncrementViewsView, RFQSavedView, RFQReportView, RFQByUserView, RFQReportedByListView, RFQCommentCreateView, RFQCommentListView
 
 urlpatterns = [
     path('rfqs/', RFQListCreateView.as_view(), name='rfq-list-create'),
@@ -14,4 +14,6 @@ urlpatterns = [
     path('rfqs/report/', RFQReportView.as_view(), name='rfq-report'),
     path('rfqs/reported-by-list/', RFQReportedByListView.as_view(), name='rfq-reported-by-list'),
     path('rfqs/get-by-user/<int:user_id>/', RFQByUserView.as_view(), name='rfq-by-user'),
+    path('create-comment/', RFQCommentCreateView.as_view(), name='rfq-create-comment'),
+    path('get-comment-list/<int:rfq_id>/', RFQCommentListView.as_view(), name='rfq-comment-list'),
 ] 

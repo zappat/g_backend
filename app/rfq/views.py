@@ -1,6 +1,6 @@
 from rest_framework import generics, permissions
-from .models import RFQ, RFQAttachment
-from .serializers import RFQSerializer, RFQAttachmentSerializer
+from .models import RFQ, RFQAttachment, RFQComment
+from .serializers import RFQSerializer, RFQAttachmentSerializer, RFQCommentSerializer
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.http import QueryDict
 from rest_framework.response import Response
@@ -516,3 +516,79 @@ class RFQReportedByListView(APIView):
                 {"error": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class RFQCommentCreateView(APIView):
+    """
+    Create a comment on an RFQ.
+    POST /api/rfq/create-comment/
+    Body: { "rfq_id": 4, "message": "I want to talk with you.", "merchant": 9 }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            # Extract data from request
+            rfq_id = request.data.get('rfq_id')
+            message = request.data.get('message')
+            merchant_id = request.data.get('merchant')
+
+            if not rfq_id or not message or not merchant_id:
+                return Response(
+                    {"error": "rfq_id, message, and merchant are required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Get the RFQ
+            try:
+                rfq = RFQ.objects.get(id=rfq_id)
+            except RFQ.DoesNotExist:
+                return Response(
+                    {"error": "RFQ not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Get the merchant user
+            try:
+                merchant = User.objects.get(id=merchant_id)
+            except User.DoesNotExist:
+                return Response(
+                    {"error": "Merchant not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Create the comment
+            comment = RFQComment.objects.create(
+                rfq=rfq,
+                merchant=merchant,
+                message=message
+            )
+
+            # Serialize and return the comment
+            serializer = RFQCommentSerializer(comment)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class RFQCommentListView(generics.ListAPIView):
+    """
+    Get all comments for a specific RFQ.
+    GET /api/rfq/get-comment-list/<rfq_id>/
+    """
+    serializer_class = RFQCommentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        rfq_id = self.kwargs.get('rfq_id')
+        return RFQComment.objects.filter(rfq_id=rfq_id).order_by('-created_at')
+
+    def get_permissions(self):
+        # Allow unauthenticated read-only access; write requires authentication
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]

@@ -39,4 +39,13 @@ class RFQAttachment(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Attachment for RFQ {self.rfq.id}" 
+        return f"Attachment for RFQ {self.rfq.id}"
+
+class RFQComment(models.Model):
+    rfq = models.ForeignKey(RFQ, on_delete=models.CASCADE, related_name='comments')
+    merchant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='rfq_comments')
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment on RFQ {self.rfq.id} by {self.merchant.email}" 

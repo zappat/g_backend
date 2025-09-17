@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import RFQ, RFQAttachment
+from .models import RFQ, RFQAttachment, RFQComment
 from user.models import EquipmentCategory
 import json
 import mimetypes
@@ -189,4 +189,13 @@ class RFQSerializer(serializers.ModelSerializer):
 
     def get_reported_by(self, obj):
         """Return array of user IDs who have reported this RFQ"""
-        return list(obj.reported_by.values_list('id', flat=True)) 
+        return list(obj.reported_by.values_list('id', flat=True))
+
+class RFQCommentSerializer(serializers.ModelSerializer):
+    merchant_email = serializers.CharField(source='merchant.email', read_only=True)
+    merchant_name = serializers.CharField(source='merchant.first_name', read_only=True)
+
+    class Meta:
+        model = RFQComment
+        fields = ['id', 'rfq', 'merchant', 'merchant_email', 'merchant_name', 'message', 'created_at']
+        read_only_fields = ['id', 'created_at', 'merchant_email', 'merchant_name'] 
