@@ -56,16 +56,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }))
                     return
 
-            # Handle quote messages without conversation_id
-            if message_type == 'quote' and not conversation_id and receiver:
-                logger.info(f"Creating conversation for quote message: sender={sender_email}, receiver={receiver}")
-                conversation_id = await self.get_or_create_conversation_for_quote(
+            # Handle messages without conversation_id - create conversation if receiver is provided
+            if not conversation_id and receiver:
+                logger.info(f"Creating conversation for message: sender={sender_email}, receiver={receiver}, type={message_type}")
+                conversation_id = await self.get_or_create_conversation(
                     sender_email, receiver
                 )
                 logger.info(f"Conversation created: {conversation_id}")
                 if not conversation_id:
                     await self.send(text_data=json.dumps({
-                        'error': 'Could not create conversation for quote message'
+                        'error': 'Could not create conversation'
                     }))
                     return
             elif not conversation_id:
@@ -188,8 +188,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return None
 
     @database_sync_to_async
-    def get_or_create_conversation_for_quote(self, sender_email, receiver):
-        """Get existing conversation or create new one for quote messages"""
+    def get_or_create_conversation(self, sender_email, receiver):
+        """Get existing conversation or create new one for any message type"""
         try:
             from .models import Conversation
             from core.models import User
@@ -239,7 +239,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return conversation.id
 
         except Exception as e:
-            logger.error(f"Error getting/creating conversation for quote: {str(e)}")
+            logger.error(f"Error getting/creating conversation: {str(e)}")
             return None
 
     @database_sync_to_async
