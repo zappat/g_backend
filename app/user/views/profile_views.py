@@ -165,7 +165,7 @@ def create_checkout_session(request):
         return HttpResponseNotAllowed(['GET', 'POST'])
 
     # Prefer query params; allow POST form/body as fallback; then settings; then hardcoded dev defaults
-    price_id = 'price_1S3PPRCWogwHqyflQbGpL0Z9'
+    price_id = 'price_1S8hNGGdsnadvTCQGEh5XkrN'
     success_url = 'http://51.21.171.104/subscription?session_id={CHECKOUT_SESSION_ID}'
     cancel_url = 'http://51.21.171.104/subscription'
     quantity = 1
