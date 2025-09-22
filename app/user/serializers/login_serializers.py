@@ -43,17 +43,18 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
             'access': str(refresh.access_token),
         }
         data['role'] = user.role
-        data['is_verified'] = False
+        data['email_verified'] = False
         if hasattr(user, 'email_verification'):
-            data['is_verified'] = user.email_verification.is_verified
+            data['email_verified'] = user.email_verification.is_verified
 
-        # Add user name and profile image
         data['name'] = None
         data['profile_image'] = None
+        data['is_verified'] = None
         data['email'] = user.email
         data['id'] = user.id
         if user.role == 'merchant' and hasattr(user, 'merchantprofile'):
             data['name'] = user.merchantprofile.display_name
+            data['is_verified'] = user.merchantprofile.is_verified
             if user.merchantprofile.profile_picture:
                 data['profile_image'] = user.merchantprofile.profile_picture.url
         elif user.role == 'renter' and hasattr(user, 'renterprofile'):
@@ -62,7 +63,7 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
                 data['profile_image'] = user.renterprofile.profile_picture.url
 
         # Send verification code
-        if not data['is_verified']:
+        if not data['email_verified']:
             code = f"{random.randint(100000, 999999)}"
             expires_at = timezone.now() + timedelta(minutes=10)
             ev, created = EmailVerification.objects.get_or_create(

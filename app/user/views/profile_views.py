@@ -496,7 +496,7 @@ class IncreaseMerchantViewsAPIView(APIView):
     def post(self, request, merchant_id):
         try:
             # Get the merchant profile by ID
-            merchant_profile = get_object_or_404(MerchantProfile, id=merchant_id)
+            merchant_profile = get_object_or_404(MerchantProfile, user_id=merchant_id)
             
             # Increment the views count
             merchant_profile.views += 1

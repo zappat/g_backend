@@ -36,15 +36,15 @@ class QuoteListCreateView(generics.ListCreateAPIView):
 
 class QuoteCountView(APIView):
     """
-    Get quote count for a specific user by email.
-    URL: /api/quote/quotes/count/{email}/
+    Get quote count for a specific user by id.
+    URL: /api/quote/quotes/count/{id}/
     """
     permission_classes = [permissions.AllowAny]
 
-    def get(self, request, email):
+    def get(self, request, id):
         try:
-            # Find user by email
-            user = get_object_or_404(User, email=email)
+            # Find user by id
+            user = get_object_or_404(User, id=id)
             
             # Get query parameters for filtering
             status_filter = request.query_params.get('status', None)
@@ -75,7 +75,7 @@ class QuoteCountView(APIView):
             ).count()
             
             return Response({
-                'user_email': email,
+                'user_id': id,
                 'total_quotes': total_quotes,
                 'recent_quotes': recent_quotes,
                 'quotes_this_month': recent_quotes
@@ -83,7 +83,7 @@ class QuoteCountView(APIView):
             
         except User.DoesNotExist:
             return Response(
-                {'error': 'User with this email not found'},
+                {'error': 'User with this id not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:

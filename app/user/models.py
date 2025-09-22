@@ -45,6 +45,7 @@ class MerchantProfile(UUIDBase):
     instagram_url = models.URLField(blank=True, null=True)
     equipment_categories = models.CharField(max_length=255, blank=True, null=True)
     is_pro = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
     pro_expires_at = models.DateTimeField(blank=True, null=True)
     views = models.PositiveIntegerField(default=0)
 

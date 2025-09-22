@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    NotificationsByEmailView,
+    NotificationsByIdView,
     NotificationListCreateView,
     NotificationDetailView,
     NotificationMarkReadView,
@@ -8,8 +8,8 @@ from .views import (
 )
 
 urlpatterns = [
-    # Main endpoint: get notifications by email
-    path('notifications/<str:email>/', NotificationsByEmailView.as_view(), name='notifications-by-email'),
+    # Main endpoint: get notifications by id
+    path('notifications/<str:id>/', NotificationsByIdView.as_view(), name='notifications-by-id'),
     
     # CRUD operations
     path('notifications/', NotificationListCreateView.as_view(), name='notification-list-create'),

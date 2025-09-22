@@ -9,17 +9,17 @@ from .models import Notification
 from .serializers import NotificationSerializer, NotificationCreateSerializer, NotificationMarkReadSerializer
 
 
-class NotificationsByEmailView(APIView):
+class NotificationsByIdView(APIView):
     """
-    Get notifications for a user by their email
-    URL: /api/notification/notifications/{email}/
+    Get notifications for a user by their id
+    URL: /api/notification/notifications/{id}/
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request, email):
+    def get(self, request, id):
         try:
-            # Find user by email
-            user = get_object_or_404(User, email=email)
+            # Find user by id
+            user = get_object_or_404(User, id=id)
             
             # Get query parameters
             is_read = request.query_params.get('is_read', None)
@@ -56,7 +56,7 @@ class NotificationsByEmailView(APIView):
             
         except User.DoesNotExist:
             return Response(
-                {'error': 'User with this email not found'},
+                {'error': 'User with this id not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
