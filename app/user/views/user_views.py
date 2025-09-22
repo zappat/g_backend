@@ -24,7 +24,9 @@ class CreateUserView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         instance = super(CreateUserView, self).post(request, *args, **kwargs)
         email = instance.data.get('email')
-        user = get_user_model().objects.get(email=email)
+        role = instance.data.get('role')
+        # Get the specific user by email and role since we now allow same email for different roles
+        user = get_user_model().objects.get(email=email, role=role)
         print(f"🔑 User created: {user}")
         token = get_tokens_for_user(user)
 

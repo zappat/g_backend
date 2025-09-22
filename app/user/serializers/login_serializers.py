@@ -4,6 +4,7 @@ from rest_framework import status
 
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 from core.models import User
 import random
 from django.core.mail import send_mail
@@ -11,25 +12,37 @@ from django.utils import timezone
 from datetime import timedelta
 from user.models import EmailVerification
 
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+class CustomTokenObtainPairSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+    role = serializers.CharField(default='renter')
+    
     def validate(self, attrs):
         email = attrs.get("email")
         password = attrs.get("password")
+        role = attrs.get("role", "renter")  # Default to renter if not specified
 
-        user = authenticate(email=email, password=password)
+        # Create username from email and role
+        username = f"{email}_{role}"
+        
+        user = authenticate(username=username, password=password)
 
         if not user:
-            if not User.objects.filter(email=email).exists():
+            if not User.objects.filter(email=email, role=role).exists():
                 raise serializers.ValidationError({
-                    "email":"User with this email doesn't exist"
+                    "email": f"User with this email and role doesn't exist"
                 })  
             raise serializers.ValidationError({
                 "password": "Invalid password"
             })        
 
-        data = super().validate(attrs)
+        # Manually create the token data
+        refresh = RefreshToken.for_user(user)
+        data = {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
         data['role'] = user.role
-        data['roles'] = user.roles
         data['is_verified'] = False
         if hasattr(user, 'email_verification'):
             data['is_verified'] = user.email_verification.is_verified
@@ -39,17 +52,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['profile_image'] = None
         data['email'] = user.email
         data['id'] = user.id
-        if user.roles == ['merchant'] and hasattr(user, 'merchantprofile'):
+        if user.role == 'merchant' and hasattr(user, 'merchantprofile'):
             data['name'] = user.merchantprofile.display_name
             if user.merchantprofile.profile_picture:
                 data['profile_image'] = user.merchantprofile.profile_picture.url
-        elif user.roles == ['renter'] and hasattr(user, 'renterprofile'):
+        elif user.role == 'renter' and hasattr(user, 'renterprofile'):
             data['name'] = user.renterprofile.display_name
             if user.renterprofile.profile_picture:
                 data['profile_image'] = user.renterprofile.profile_picture.url
-        elif user.roles == ['renter', 'merchant']:
-            data['name'] = [user.renterprofile.display_name, user.merchantprofile.display_name]
-            data['profile_image'] = [user.renterprofile.profile_picture.url, user.merchantprofile.profile_picture.url]
 
         # Send verification code
         if not data['is_verified']:

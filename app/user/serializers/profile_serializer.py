@@ -22,8 +22,10 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
         print(f"🔍 Request method: {self.context['request'].method}")
         print(f"🔍 Request user: {self.context['request'].user}")
         
-        if MerchantProfile.objects.filter(user=self.context['request'].user).exists() and self.context['request'].method == "POST":
-            raise ValidationError("Merchant Profile already exists")
+        # Only check for existing profile if we have a valid user and it's a POST request
+        if hasattr(self.context['request'], 'user') and self.context['request'].user and not self.context['request'].user.is_anonymous:
+            if MerchantProfile.objects.filter(user=self.context['request'].user).exists() and self.context['request'].method == "POST":
+                raise ValidationError("Merchant Profile already exists")
         return super().validate(attrs)
 
     def create(self, validated_data):
@@ -76,8 +78,10 @@ class RenterProfileSerializer(serializers.ModelSerializer):
                   'website_url', 'linkedin_url', 'instagram_url', 'vimeo_url', 'youtube_url')
 
     def validate(self, attrs):
-        if RenterProfile.objects.filter(user=self.context['request'].user).exists() and self.context['request'].method == "POST":
-            raise ValidationError("Renter Profile already exists")
+        # Only check for existing profile if we have a valid user and it's a POST request
+        if hasattr(self.context['request'], 'user') and self.context['request'].user and not self.context['request'].user.is_anonymous:
+            if RenterProfile.objects.filter(user=self.context['request'].user).exists() and self.context['request'].method == "POST":
+                raise ValidationError("Renter Profile already exists")
         return super().validate(attrs)
 
     def create(self, validated_data):

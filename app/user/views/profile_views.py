@@ -82,14 +82,14 @@ class MerchantProfileByEmailView(generics.RetrieveAPIView):
     def get_object(self):
         email = self.kwargs.get('email')
         try:
-            # Find the user by email
-            user = User.objects.get(email=email)
+            # Find the user by email and merchant role
+            user = User.objects.get(email=email, role='merchant')
             # Get or create their merchant profile
             profile, created = MerchantProfile.objects.get_or_create(user=user)
             return profile
         except User.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(f"No user found with email: {email}")
+            raise NotFound(f"No merchant user found with email: {email}")
 
 
 class MerchantsByMerchantIdsAPIView(APIView):
@@ -468,14 +468,14 @@ class RenterProfileByEmailView(generics.RetrieveAPIView):
     def get_object(self):
         email = self.kwargs.get('email')
         try:
-            # Find the user by email
-            user = User.objects.get(email=email)
+            # Find the user by email and renter role
+            user = User.objects.get(email=email, role='renter')
             # Get or create their renter profile
             profile, created = RenterProfile.objects.get_or_create(user=user)
             return profile
         except User.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(f"No user found with email: {email}")
+            raise NotFound(f"No renter user found with email: {email}")
 
 class GetAllRentersAPIView(generics.ListAPIView):
     """Get all renters"""
