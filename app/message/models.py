@@ -6,6 +6,7 @@ class Conversation(models.Model):
     user2 = models.ForeignKey(User, related_name='conversations_as_user2', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    rfq_id = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         unique_together = ('user1', 'user2')
@@ -22,7 +23,7 @@ class Message(models.Model):
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
     text = models.TextField(blank=True)
     sender_role = models.TextField(blank=True)
-    attachment = models.ForeignKey(Attachment, null=True, blank=True, on_delete=models.SET_NULL)
+    attachment = models.ForeignKey(Attachment, null=True, blank=True, on_delete=models.SET_NULL, related_name='message_attachment')
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 

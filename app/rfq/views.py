@@ -408,23 +408,23 @@ class RFQReportView(APIView):
 
             # Extract data from request
             rfq_id = data.get('rfq_id')
-            user_email = data.get('user')
+            user_id = data.get('user')
             print("DEBUG: rfq_id:", rfq_id)
-            print("DEBUG: user_email:", user_email)
+            print("DEBUG: user_id:", user_id)
 
-            if not rfq_id or not user_email:
+            if not rfq_id or not user_id:
                 return Response(
                     {"error": "Both 'rfq_id' and 'user' are required"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
             # Get the user
-            print("DEBUG: Looking up user with email:", user_email)
+            print("DEBUG: Looking up user with id:", user_id)
             try:
-                user = User.objects.get(email=user_email)
+                user = User.objects.get(id=user_id)
                 print("DEBUG: User found:", user.id, user.email)
             except User.DoesNotExist:
-                print("DEBUG: User not found with email:", user_email)
+                print("DEBUG: User not found with id:", user_id)
                 return Response(
                     {"error": "User not found"},
                     status=status.HTTP_404_NOT_FOUND
@@ -464,7 +464,7 @@ class RFQReportView(APIView):
 
             return Response({
                 "rfq_id": rfq_id,
-                "user": user_email,
+                "user": user_id,
                 "action": action,
                 "message": message,
                 "reported_count": rfq.reported_by.count()

@@ -21,7 +21,7 @@ class ConversationSerializer(serializers.ModelSerializer):
     user1 = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     user2 = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     messages = MessageSerializer(many=True, read_only=True)
-
+    rfq_id = serializers.IntegerField(required=False, allow_null=True)
     class Meta:
         model = Conversation
-        fields = ['id', 'user1', 'user2', 'created_at', 'updated_at', 'messages'] 
+        fields = ['id', 'user1', 'user2', 'created_at', 'updated_at', 'messages', 'rfq_id'] 

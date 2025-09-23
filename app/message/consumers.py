@@ -34,20 +34,49 @@ class ChatConsumer(AsyncWebsocketConsumer):
             message_text = data.get('message', '')
             sender_id = data.get('sender_id', '')
             sender_role = data.get('sender_role', '')
-            conversation_id = data.get('conversation_id')
+            # Handle both conversation_id and conversation field names
+            conversation_id = data.get('conversation_id') or data.get('conversation')
             message_type = data.get('type', 'general')
             receiver = data.get('receiver')  # For quote messages
+            file_url = data.get('file_url')
 
             logger.info(f"Received message in room {self.room_name}: type={message_type}, senderId={sender_id}, conversation_id={conversation_id}")
             logger.info(f"Sender role: {sender_role}")
             logger.info(f"Receiver: {receiver}")
             logger.info(f"Message text: {message_text}")
+            logger.info(f"File URL: {file_url}")
+            # Log which field was used for conversation
+            if data.get('conversation_id'):
+                logger.info("Using conversation_id field")
+            elif data.get('conversation'):
+                logger.info("Using conversation field")
 
-            if not message_text or not sender_id:
+            # Check for attachment_id or file_url if no message text
+            attachment_id = data.get('attachment_id')
+            
+            if not sender_id:
                 await self.send(text_data=json.dumps({
-                    'error': 'Missing required fields: message, sender_id'
+                    'error': 'Missing required field: sender_id'
                 }))
                 return
+                
+            # Must have either message text or file attachment
+            if not message_text and not attachment_id and not file_url:
+                await self.send(text_data=json.dumps({
+                    'error': 'Missing required field: message text or file attachment'
+                }))
+                return
+
+            # Check for duplicate messages (same content, sender, and recent timestamp)
+            # Only check for duplicates if there's message text
+            if message_text:
+                duplicate_check = await self.check_duplicate_message(sender_id, message_text)
+                if duplicate_check:
+                    logger.info(f"Duplicate message detected, skipping: {message_text[:50]}...")
+                    await self.send(text_data=json.dumps({
+                        'error': 'Duplicate message detected'
+                    }))
+                    return
 
             # Validate quote messages have required fields
             if message_type == 'quote':
@@ -63,8 +92,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # Handle messages without conversation_id - create conversation if receiver is provided
             if not conversation_id and receiver:
                 logger.info(f"Creating conversation for message: sender={sender_id}, receiver={receiver}, type={message_type}")
+                # Get rfq_id for quote messages
+                rfq_id = (data.get('rfqId') or data.get('rfq_id')) if message_type == 'quote' else None
                 conversation_id = await self.get_or_create_conversation(
-                    sender_id, receiver
+                    sender_id, receiver, rfq_id
                 )
                 logger.info(f"Conversation created: {conversation_id}")
                 if not conversation_id:
@@ -73,21 +104,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }))
                     return
             elif not conversation_id:
-                logger.warning(f"Missing conversation_id for message type {message_type} in room {self.room_name}")
+                logger.warning(f"Missing conversation_id/conversation for message type {message_type} in room {self.room_name}")
                 await self.send(text_data=json.dumps({
-                    'error': 'Missing required field: conversation_id'
+                    'error': 'Missing required field: conversation_id or conversation'
                 }))
                 return
 
             # Save message to database
             rfq_id = (data.get('rfqId') or data.get('rfq_id')) if message_type == 'quote' else None
+            logger.info(f"Saving message with attachment_id: {attachment_id}, file_url: {file_url}")
             message_obj = await self.save_message(
                 message_text=message_text,
                 sender=sender_id,
                 sender_role=sender_role,
                 conversation_id=conversation_id,
                 message_type=message_type,
-                rfq_id=rfq_id
+                rfq_id=rfq_id,
+                attachment_id=attachment_id,
+                file_url=file_url
             )
 
             if message_obj:
@@ -96,6 +130,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 # Serialize the message
                 message_data = await self.serialize_message(message_obj)
 
+                # Add receiver information for all messages
+                if receiver:
+                    if isinstance(receiver, int):
+                        message_data['receiver'] = receiver
+                    elif isinstance(receiver, dict):
+                        message_data['receiver'] = receiver.get('id', receiver)
+                    else:
+                        message_data['receiver'] = receiver
+                else:
+                    # Get receiver from conversation
+                    conversation = message_obj.conversation
+                    if conversation.user1.id == message_obj.sender.id:
+                        message_data['receiver'] = conversation.user2.id
+                    else:
+                        message_data['receiver'] = conversation.user1.id
+
                 # Add additional data for quote messages
                 if message_type == 'quote':
                     message_data['type'] = 'quote'
@@ -103,8 +153,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     rfq_id_value = data.get('rfqId') or data.get('rfq_id')
                     if rfq_id_value:
                         message_data['rfqId'] = rfq_id_value
-                    if receiver:
-                        message_data['receiver'] = receiver
                     logger.info(f"Quote message processed with rfqId: {rfq_id_value}")
 
                 # Send message to room group
@@ -136,7 +184,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(event['message_data']))
 
     @database_sync_to_async
-    def save_message(self, message_text, sender, sender_role, conversation_id, message_type='general', rfq_id=None):
+    def save_message(self, message_text, sender, sender_role, conversation_id, message_type='general', rfq_id=None, attachment_id=None, file_url=None):
         try:
             from .models import Message, Conversation
             from core.models import User
@@ -178,12 +226,51 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     logger.error(f"Error creating quote: {str(e)}")
                     return None
 
+            # Handle file attachment
+            attachment = None
+            logger.info(f"Processing attachment_id: {attachment_id}, file_url: {file_url}")
+            
+            if attachment_id:
+                try:
+                    from .models import Attachment
+                    attachment = Attachment.objects.get(id=attachment_id)
+                    logger.info(f"Found attachment by ID: {attachment.id} for message")
+                except Attachment.DoesNotExist:
+                    logger.error(f"Attachment with id {attachment_id} does not exist")
+                    return None
+                except Exception as e:
+                    logger.error(f"Error getting attachment: {str(e)}")
+                    return None
+            elif file_url:
+                # Try to find attachment by file URL
+                try:
+                    from .models import Attachment
+                    # Extract filename from URL
+                    filename = file_url.split('/')[-1]
+                    logger.info(f"Looking for attachment with filename: {filename}")
+                    
+                    # Find attachment by filename
+                    attachment = Attachment.objects.filter(file__icontains=filename).first()
+                    
+                    if attachment:
+                        logger.info(f"Found attachment by file URL: {attachment.id} for message")
+                    else:
+                        logger.warning(f"No attachment found for file URL: {file_url}")
+                        # List recent attachments for debugging
+                        recent_attachments = Attachment.objects.all().order_by('-uploaded_at')[:3]
+                        logger.info(f"Recent attachments: {[(a.id, str(a.file)) for a in recent_attachments]}")
+                except Exception as e:
+                    logger.error(f"Error finding attachment by file URL: {str(e)}")
+            else:
+                logger.info("No attachment_id or file_url provided")
+
             # Create message
             message = Message.objects.create(
                 conversation=conversation,
                 sender=sender,
                 sender_role=sender_role,
-                text=message_text
+                text=message_text or '',  # Allow empty text for file-only messages
+                attachment=attachment
             )
 
             # Update conversation timestamp
@@ -196,7 +283,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return None
 
     @database_sync_to_async
-    def get_or_create_conversation(self, sender_id, receiver):
+    def get_or_create_conversation(self, sender_id, receiver, rfq_id=None):
         """Get existing conversation or create new one for any message type"""
         try:
             from .models import Conversation
@@ -258,17 +345,44 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if not conversation:
                 conversation = Conversation.objects.create(
                     user1=sender,
-                    user2=receiver_user
+                    user2=receiver_user,
+                    rfq_id=rfq_id
                 )
-                logger.info(f"Created new conversation: {conversation.id} between {sender.email} and {receiver_user.email}")
+                logger.info(f"Created new conversation: {conversation.id} between {sender.email} and {receiver_user.email} with rfq_id: {rfq_id}")
             else:
-                logger.info(f"Found existing conversation: {conversation.id} between {sender.email} and {receiver_user.email}")
+                # If conversation exists but doesn't have rfq_id and we have one, update it
+                if rfq_id and not conversation.rfq_id:
+                    conversation.rfq_id = rfq_id
+                    conversation.save()
+                    logger.info(f"Updated existing conversation: {conversation.id} with rfq_id: {rfq_id}")
+                else:
+                    logger.info(f"Found existing conversation: {conversation.id} between {sender.email} and {receiver_user.email}")
 
             return conversation.id
 
         except Exception as e:
             logger.error(f"Error getting/creating conversation: {str(e)}")
             return None
+
+    @database_sync_to_async
+    def check_duplicate_message(self, sender_id, message_text):
+        """Check if the same message was sent recently by the same sender"""
+        try:
+            from .models import Message
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            # Check for duplicate message in last 5 seconds
+            recent_message = Message.objects.filter(
+                sender_id=sender_id,
+                text=message_text,
+                created_at__gte=timezone.now() - timedelta(seconds=5)
+            ).first()
+            
+            return recent_message is not None
+        except Exception as e:
+            logger.error(f"Error checking duplicate message: {str(e)}")
+            return False
 
     @database_sync_to_async
     def serialize_message(self, message):

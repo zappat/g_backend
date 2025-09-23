@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ConversationViewSet, ConversationByEmail, MessagesByConversationIdAPIView
+from .views import ConversationViewSet, ConversationByEmail, MessagesByConversationIdAPIView, FileUploadView
 
 urlpatterns = [
     # Conversation CRUD operations (including retrieve by ID)
@@ -17,4 +17,7 @@ urlpatterns = [
     # Additional conversation endpoints
     path('conversations/by-email/', ConversationByEmail.as_view(), name='conversation-by-email'),
     path('messages/', MessagesByConversationIdAPIView.as_view(), name='messages-by-conversation-id'),
+    
+    # File upload endpoint
+    path('file-upload/', FileUploadView.as_view(), name='file-upload'),
 ]

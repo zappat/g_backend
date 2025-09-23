@@ -7,6 +7,13 @@ from django.db import models
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.utils import timezone
+import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
@@ -86,3 +93,79 @@ class ConversationByEmail(APIView):
         if not conversations:
             return Response({'error': 'No conversations found'}, status=status.HTTP_404_NOT_FOUND)
         return Response(ConversationSerializer(conversations, many=True).data)
+
+
+class FileUploadView(APIView):
+    """
+    Handle file uploads for messages
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        try:
+            # Get the uploaded file
+            file = request.FILES.get('file')
+            if not file:
+                return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get request ID for deduplication (if provided by frontend)
+            request_id = request.headers.get('X-Request-ID') or request.data.get('request_id')
+            if request_id:
+                # Check if this exact request was already processed
+                from django.core.cache import cache
+                cache_key = f"file_upload_{request_id}"
+                if cache.get(cache_key):
+                    return Response({
+                        'error': 'Duplicate request detected'
+                    }, status=status.HTTP_409_CONFLICT)
+                # Set cache for 30 seconds
+                cache.set(cache_key, True, 30)
+
+            # Check for duplicate uploads based on file content hash
+            import hashlib
+            file_content = file.read()
+            file.seek(0)  # Reset file pointer
+            file_hash = hashlib.md5(file_content).hexdigest()
+            
+            # Check if same file content was uploaded in last 5 seconds
+            recent_uploads = Attachment.objects.filter(
+                uploaded_at__gte=timezone.now() - timezone.timedelta(seconds=5)
+            ).order_by('-uploaded_at')
+            
+            for recent_upload in recent_uploads:
+                try:
+                    with recent_upload.file.open('rb') as f:
+                        existing_content = f.read()
+                        existing_hash = hashlib.md5(existing_content).hexdigest()
+                        if existing_hash == file_hash:
+                            return Response({
+                                'message': 'File already uploaded recently',
+                                'attachment': AttachmentSerializer(recent_upload).data
+                            }, status=status.HTTP_200_OK)
+                except:
+                    continue  # Skip this file if we can't read it
+
+            # Generate unique filename to avoid conflicts
+            file_extension = file.name.split('.')[-1] if '.' in file.name else ''
+            unique_filename = f"{uuid.uuid4()}.{file_extension}" if file_extension else str(uuid.uuid4())
+
+            # Create attachment record
+            logger.info(f"Creating attachment with file: {file.name}")
+            attachment = Attachment.objects.create(
+                file=file,
+                uploaded_at=timezone.now()
+            )
+            logger.info(f"Attachment created successfully: {attachment.id}")
+
+            # Return the attachment data
+            serializer = AttachmentSerializer(attachment)
+            return Response({
+                'message': 'File uploaded successfully',
+                'attachment': serializer.data
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({
+                'error': f'File upload failed: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
