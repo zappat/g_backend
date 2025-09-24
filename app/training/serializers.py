@@ -62,7 +62,7 @@ class TrainingCourseCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         category_name = validated_data.pop('category', None)
-        created_by_email = validated_data.pop('created_by', None)
+        created_by_id = validated_data.pop('created_by', None)
         
         # Handle category conversion
         if category_name:
@@ -73,12 +73,12 @@ class TrainingCourseCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"category": f"Category '{category_name}' does not exist"})
         
         # Handle user conversion
-        if created_by_email:
+        if created_by_id:
             try:
-                user = User.objects.get(email=created_by_email)
+                user = User.objects.get(id=created_by_id)
                 validated_data['created_by'] = user
             except User.DoesNotExist:
-                raise serializers.ValidationError({"created_by": f"User with email '{created_by_email}' does not exist"})
+                raise serializers.ValidationError({"created_by": f"User with id '{created_by_id}' does not exist"})
         
         return super().create(validated_data) 
 
@@ -96,15 +96,15 @@ class TrainingCourseCreateSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({"category": f"Category '{category_name}' does not exist"})
 
         # Resolve and map created_by from a provided email
-        created_by_email = validated_data.pop('created_by', None)
-        if created_by_email is not None:
-            if created_by_email == "":
+        created_by_id = validated_data.pop('created_by', None)
+        if created_by_id is not None:
+            if created_by_id == "":
                 validated_data['created_by'] = None
             else:
                 try:
-                    user = User.objects.get(email=created_by_email)
+                    user = User.objects.get(id=created_by_id)
                     validated_data['created_by'] = user
                 except User.DoesNotExist:
-                    raise serializers.ValidationError({"created_by": f"User with email '{created_by_email}' does not exist"})
+                    raise serializers.ValidationError({"created_by": f"User with id '{created_by_id}' does not exist"})
 
         return super().update(instance, validated_data)
