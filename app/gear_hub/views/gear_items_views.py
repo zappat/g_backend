@@ -27,9 +27,16 @@ class GearItemListAPIView(generics.ListAPIView):
             try:
                 provider_id = int(provider_id)
                 queryset = queryset.filter(provider_id=provider_id)
+
             except (ValueError, TypeError):
                 # If provider_id is not a valid integer, ignore the filter
                 pass
+
+        else:
+            queryset = queryset.filter(
+                provider__role='merchant',
+                provider__merchantprofile__is_verified=True
+            )
         
         return queryset
     

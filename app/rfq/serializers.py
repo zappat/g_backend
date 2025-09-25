@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import RFQ, RFQAttachment, RFQComment
 from user.models import EquipmentCategory
+from core.models import User
 import json
 import mimetypes
 from datetime import timezone
@@ -59,7 +60,9 @@ class RFQSerializer(serializers.ModelSerializer):
     expiry_date = serializers.DateField(required=False, allow_null=True)
     saved_by = serializers.SerializerMethodField(read_only=True)
     reported_by = serializers.SerializerMethodField(read_only=True)
-
+    receiver = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False, allow_null=True)
+    receiver_email = serializers.SerializerMethodField(read_only=True)
+    receiver_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     class Meta:
         model = RFQ
         fields = [
@@ -80,6 +83,9 @@ class RFQSerializer(serializers.ModelSerializer):
             'views',
             'saved_by',
             'reported_by',
+            'receiver',
+            'receiver_email',
+            'receiver_id',
         ]
 
     def to_internal_value(self, data):
@@ -181,6 +187,31 @@ class RFQSerializer(serializers.ModelSerializer):
                 processed_data = processed_data.copy()
                 processed_data['notes_per_category'] = ''
         
+        if 'receiver_id' in processed_data and processed_data['receiver_id']:
+            try:
+                from core.models import User
+                receiver_id = processed_data['receiver_id']
+                # Try to convert to int first (for backward compatibility)
+                try:
+                    receiver_id = int(receiver_id)
+                    user = User.objects.get(id=receiver_id)
+                except ValueError:
+                    # If not an integer, treat as UUID string
+                    user = User.objects.get(id=receiver_id)
+                
+                processed_data = processed_data.copy()
+                processed_data['receiver'] = user.id  # Pass the user ID (UUID)
+                # Remove receiver_id from processed_data as it's not a model field
+                del processed_data['receiver_id']
+            except (ValueError, User.DoesNotExist) as e:
+                processed_data = processed_data.copy()
+                if 'receiver_id' in processed_data:
+                    del processed_data['receiver_id']
+        elif 'receiver_id' in processed_data:
+            # If receiver_id is empty or None, remove it
+            processed_data = processed_data.copy()
+            del processed_data['receiver_id']
+        
         return super().to_internal_value(processed_data)
 
     def get_saved_by(self, obj):
@@ -190,6 +221,12 @@ class RFQSerializer(serializers.ModelSerializer):
     def get_reported_by(self, obj):
         """Return array of user IDs who have reported this RFQ"""
         return list(obj.reported_by.values_list('id', flat=True))
+
+    def get_receiver_email(self, obj):
+        """Return receiver email if receiver exists"""
+        if obj.receiver:
+            return obj.receiver.email
+        return None
 
 class RFQCommentSerializer(serializers.ModelSerializer):
     merchant_email = serializers.CharField(source='merchant.email', read_only=True)

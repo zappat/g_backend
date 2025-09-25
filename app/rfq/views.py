@@ -32,7 +32,14 @@ class RFQListCreateView(generics.ListCreateAPIView):
         return [permissions.IsAuthenticated()]
 
     def perform_create(self, serializer):
+        print(f"perform_create - validated_data: {serializer.validated_data}")
+        print(f"perform_create - receiver in validated_data: {serializer.validated_data.get('receiver')}")
+        
         rfq = serializer.save(created_by=self.request.user)
+        
+        print(f"perform_create - RFQ saved with ID: {rfq.id}")
+        print(f"perform_create - RFQ receiver after save: {rfq.receiver}")
+        print(f"perform_create - RFQ receiver_id after save: {rfq.receiver_id}")
         
         # Handle file attachments
         files = self.request.FILES.getlist('attachments')
@@ -55,8 +62,22 @@ class RFQListCreateView(generics.ListCreateAPIView):
                 print("Validation errors:", serializer.errors)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+            print("Validated data:", serializer.validated_data)
+            print("Validated data receiver:", serializer.validated_data.get('receiver'))
+
             # Call perform_create directly instead of super().create()
             self.perform_create(serializer)
+            
+            # Debug: Check what was actually saved
+            print(f"RFQ created with ID: {serializer.instance.id}")
+            print(f"RFQ receiver: {serializer.instance.receiver}")
+            print(f"RFQ receiver_id: {serializer.instance.receiver_id}")
+            print(f"RFQ receiver email: {serializer.instance.receiver.email if serializer.instance.receiver else 'None'}")
+            
+            # Refresh the instance to get the latest data
+            serializer.instance.refresh_from_db()
+            print(f"After refresh - RFQ receiver: {serializer.instance.receiver}")
+            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
             print("Exception occurred:", str(e))

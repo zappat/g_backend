@@ -5,9 +5,29 @@ from .models import TrainingCourse, TrainingCategory
 from .serializers import TrainingCourseListSerializer, TrainingCourseCreateSerializer, TrainingCategorySerializer
 
 class TrainingCourseListCreateView(generics.ListCreateAPIView):
-    queryset = TrainingCourse.objects.all().order_by('-created_at')
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     
+    def get_queryset(self):
+        queryset = TrainingCourse.objects.all().order_by('-created_at')
+        
+        # Additionally filter by provider if provider parameter is provided
+        provider_id = self.request.query_params.get('provider')
+        if provider_id:
+            try:
+                provider_id = int(provider_id)
+                queryset = queryset.filter(created_by_id=provider_id)
+            except (ValueError, TypeError):
+                # If provider_id is not a valid integer, ignore the filter
+                pass
+        
+        else:
+            queryset = queryset.filter(
+                created_by__role='merchant',
+                created_by__merchantprofile__is_verified=True
+            )
+
+        return queryset
+
     def get_serializer_class(self):
         if self.request.method == 'GET':
             return TrainingCourseListSerializer

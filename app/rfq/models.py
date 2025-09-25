@@ -13,7 +13,7 @@ class RFQ(models.Model):
         ('Private', 'Private'),
     ]
 
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_rfqs')
     title = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField()
     pickup_location = models.CharField(max_length=255)
@@ -27,6 +27,7 @@ class RFQ(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     saved_by = models.ManyToManyField(User, related_name='saved_rfqs', blank=True)
     reported_by = models.ManyToManyField(User, related_name='reported_rfqs', blank=True)
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, related_name='received_rfqs')
     views = models.PositiveIntegerField(default=0)
 
 
